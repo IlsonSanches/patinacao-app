@@ -1,11 +1,15 @@
 'use client';
 
-import Sidebar from '@/components/Sidebar';
-import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
+export default function DashboardLayout({
+  children,
+}: {
   children: React.ReactNode;
 }) {
-  return <ProtectedRoute>{children}</ProtectedRoute>;
+  return (
+    <ProtectedRoute>
+      {children}
+    </ProtectedRoute>
+  );
 } 
