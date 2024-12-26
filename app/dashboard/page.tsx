@@ -1,8 +1,10 @@
 'use client';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
   const { logout } = useAuth();
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-white">
@@ -12,8 +14,11 @@ export default function Dashboard() {
           <img src="/logo.png" alt="GP Logo" className="h-12" />
         </div>
         <div className="flex gap-4">
-          <button className="text-white hover:text-blue-100">
-            Cadastrar Vaga
+          <button 
+            onClick={() => router.push('/dashboard/cadastrar-equipe')}
+            className="text-white hover:text-blue-100"
+          >
+            Cadastrar Equipe
           </button>
           <button 
             onClick={logout}
