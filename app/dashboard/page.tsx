@@ -1,4 +1,9 @@
+'use client';
+import { useAuth } from '@/hooks/useAuth';
+
 export default function Dashboard() {
+  const { logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -6,12 +11,20 @@ export default function Dashboard() {
         <div className="flex items-center">
           <img src="/logo.png" alt="GP Logo" className="h-12" />
         </div>
-        <button className="text-white hover:text-blue-100">
-          Cadastrar Vaga
-        </button>
+        <div className="flex gap-4">
+          <button className="text-white hover:text-blue-100">
+            Cadastrar Vaga
+          </button>
+          <button 
+            onClick={logout}
+            className="text-white hover:text-blue-100"
+          >
+            Sair
+          </button>
+        </div>
       </header>
 
-      {/* Conteúdo Principal - será implementado no próximo passo */}
+      {/* Main Content */}
       <main className="container mx-auto p-8">
         <h1>Dashboard em construção...</h1>
       </main>
