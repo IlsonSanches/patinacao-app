@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 export default function CadastrarEquipe() {
   const [email, setEmail] = useState('');
@@ -19,6 +20,8 @@ export default function CadastrarEquipe() {
     setLoading(true);
     setError(null);
 
+    const loadingToast = toast.loading('Cadastrando equipe...');
+
     try {
       await addDoc(collection(db, 'equipes'), {
         email,
@@ -28,9 +31,15 @@ export default function CadastrarEquipe() {
         createdAt: new Date().toISOString()
       });
 
+      toast.success('Equipe cadastrada com sucesso!', {
+        id: loadingToast
+      });
       router.push('/dashboard');
     } catch (err) {
       setError('Erro ao cadastrar equipe. Tente novamente.');
+      toast.error('Erro ao cadastrar equipe', {
+        id: loadingToast
+      });
       console.error(err);
     } finally {
       setLoading(false);
