@@ -1,3 +1,4 @@
+'use client';
 import { useState, useEffect } from 'react';
 import { 
   signInWithEmailAndPassword, 
@@ -5,7 +6,7 @@ import {
   onAuthStateChanged,
   User 
 } from 'firebase/auth';
-import { auth } from '@/app/firebase';
+import { auth } from '../firebase';  // Caminho relativo simplificado
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);

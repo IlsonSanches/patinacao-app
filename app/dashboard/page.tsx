@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { db } from '@/lib/firebase';
+import { useAuth } from '@/app/hooks/useAuth';
+import { db } from '@/app/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
@@ -47,7 +47,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
       <header className="bg-[#00A3FF] p-4 flex justify-between items-center">
         <div className="flex items-center">
           <img src="/logo.png" alt="GP Logo" className="h-12" />
@@ -68,7 +67,6 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto p-8">
         <h1 className="text-2xl font-bold text-[#1B224B] mb-6">
           Minhas Equipes
