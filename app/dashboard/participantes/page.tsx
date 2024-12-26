@@ -13,7 +13,7 @@ export default function ParticipantesPage() {
 
   useEffect(() => {
     loadParticipantes();
-  }, [activeTab]);
+  }, [loadParticipantes]);
 
   const loadParticipantes = async () => {
     setLoading(true);
