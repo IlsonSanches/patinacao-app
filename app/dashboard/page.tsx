@@ -148,13 +148,6 @@ export default function Dashboard() {
                   </div>
                 </li>
               ))}
-              {equipes.length === 0 && (
-                <li>
-                  <div className="px-4 py-4 text-center text-gray-500">
-                    Nenhuma equipe cadastrada ainda.
-                  </div>
-                </li>
-              )}
             </ul>
           </div>
         </div>
