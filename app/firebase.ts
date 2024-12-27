@@ -4,18 +4,15 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBPjGUdpurUnANSIdRiLpfJAnm5y2doTJc",
-  authDomain: "patinacao-app.firebaseapp.com",
-  projectId: "patinacao-app",
-  storageBucket: "patinacao-app.appspot.com",
-  messagingSenderId: "165247492426",
-  appId: "1:165247492426:web:1bfda61d8764a74defa1b3"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-
-export { auth, db, storage }; 
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app); 

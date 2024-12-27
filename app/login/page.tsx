@@ -1,7 +1,9 @@
 'use client';
 
-import { useAuth } from '../contexts/AuthContext';
 import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { auth } from '../firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
