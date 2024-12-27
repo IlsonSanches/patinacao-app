@@ -1,9 +1,10 @@
 'use client';
-
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { addDoc, collection, getDocs } from 'firebase/firestore';
-import { db } from '@/src/lib/firebase';
+import { useAuth } from '@/app/hooks/useAuth';
+import { db, storage } from '@/app/firebase';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 interface Equipe {
@@ -11,224 +12,284 @@ interface Equipe {
   nomeEquipe: string;
 }
 
-interface FormData {
-  nomeCompleto: string;
-  dataNascimento: string;
-  categoria: string;
-  email: string;
-  telefone: string;
-  equipeId: string;
-  responsavel?: {
-    nome: string;
-    telefone: string;
-    email: string;
-  };
-  historicoMedico: string;
-  observacoes: string;
-}
-
 export default function CadastrarPatinador() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isMenorIdade, setIsMenorIdade] = useState(false);
+  const [nome, setNome] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
+  const [idade, setIdade] = useState<number | null>(null);
+  const [equipeId, setEquipeId] = useState('');
   const [equipes, setEquipes] = useState<Equipe[]>([]);
-  
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
+  const [exameMedico, setExameMedico] = useState<File | null>(null);
+  const [documentoId, setDocumentoId] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const router = useRouter();
 
+  // Formatar CPF
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/g, '$1.$2.$3-$4');
+  };
+
+  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCPF(e.target.value);
+    if (formatted.length <= 14) { // 14 é o tamanho do CPF formatado
+      setCpf(formatted);
+    }
+  };
+
+  // Formatar telefone
+  const formatTelefone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    return numbers.replace(/(\d{2})(\d{5})(\d{4})/g, '($1) $2-$3');
+  };
+
+  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatTelefone(e.target.value);
+    if (formatted.length <= 15) { // 15 é o tamanho do telefone formatado
+      setTelefone(formatted);
+    }
+  };
+
+  // Calcular idade
   useEffect(() => {
-    const carregarEquipes = async () => {
+    if (dataNascimento) {
+      const nascimento = new Date(dataNascimento);
+      const hoje = new Date();
+      let idade = hoje.getFullYear() - nascimento.getFullYear();
+      const mes = hoje.getMonth() - nascimento.getMonth();
+      
+      if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+        idade--;
+      }
+      
+      setIdade(idade);
+    } else {
+      setIdade(null);
+    }
+  }, [dataNascimento]);
+
+  // Carregar equipes
+  useEffect(() => {
+    const loadEquipes = async () => {
+      if (!user) return;
+      
       try {
+        // Simplificando a query para pegar todas as equipes
         const equipesRef = collection(db, 'equipes');
         const snapshot = await getDocs(equipesRef);
+        
         const equipesData = snapshot.docs.map(doc => ({
           id: doc.id,
           nomeEquipe: doc.data().nomeEquipe
         }));
+        
+        console.log('Equipes carregadas:', equipesData); // Debug
         setEquipes(equipesData);
       } catch (error) {
         console.error('Erro ao carregar equipes:', error);
-        toast.error('Erro ao carregar equipes. Por favor, recarregue a página.');
+        toast.error('Erro ao carregar equipes');
       }
     };
 
-    carregarEquipes();
-  }, []);
+    loadEquipes();
+  }, [user]);
 
-  const onSubmit = async (data: FormData) => {
-    if (!data.equipeId) {
-      toast.error('Por favor, selecione uma equipe');
-      return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      setIsLoading(true);
-      const docRef = await addDoc(collection(db, 'patinadores'), {
-        ...data,
-        dataCadastro: new Date().toISOString(),
-        status: 'ativo'
+      let exameMedicoUrl = '';
+      let documentoIdUrl = '';
+
+      if (exameMedico) {
+        const exameMedicoRef = ref(storage, `exames-medicos/${Date.now()}-${exameMedico.name}`);
+        await uploadBytes(exameMedicoRef, exameMedico);
+        exameMedicoUrl = await getDownloadURL(exameMedicoRef);
+      }
+
+      if (documentoId) {
+        const documentoIdRef = ref(storage, `documentos-id/${Date.now()}-${documentoId.name}`);
+        await uploadBytes(documentoIdRef, documentoId);
+        documentoIdUrl = await getDownloadURL(documentoIdRef);
+      }
+
+      // Encontrar o nome da equipe selecionada
+      const equipeSelected = equipes.find(eq => eq.id === equipeId);
+
+      await addDoc(collection(db, 'patinadores'), {
+        nome,
+        cpf,
+        telefone,
+        dataNascimento,
+        idade,
+        equipeId,
+        equipeNome: equipeSelected?.nomeEquipe || '',
+        exameMedicoUrl,
+        documentoIdUrl,
+        userId: user?.uid,
+        createdAt: new Date().toISOString()
       });
-      
+
       toast.success('Patinador cadastrado com sucesso!');
-      // Limpar formulário ou redirecionar
+      router.push('/dashboard');
     } catch (error) {
       console.error('Erro ao cadastrar patinador:', error);
-      toast.error('Erro ao cadastrar patinador. Tente novamente.');
+      toast.error('Erro ao cadastrar patinador');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
-
-  const verificarIdade = (data: string) => {
-    const hoje = new Date();
-    const nascimento = new Date(data);
-    const idade = hoje.getFullYear() - nascimento.getFullYear();
-    setIsMenorIdade(idade < 18);
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Cadastrar Novo Patinador</h1>
-      
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium mb-1">Nome Completo</label>
-            <input
-              type="text"
-              {...register('nomeCompleto', { required: 'Nome é obrigatório' })}
-              className="w-full p-2 border rounded-md"
-            />
-            {errors.nomeCompleto && (
-              <span className="text-red-500 text-sm">{errors.nomeCompleto.message}</span>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Equipe</label>
-            <select
-              {...register('equipeId', { required: 'Equipe é obrigatória' })}
-              className="w-full p-2 border rounded-md"
-            >
-              <option value="">Selecione uma equipe</option>
-              {equipes.map((equipe) => (
-                <option key={equipe.id} value={equipe.id}>
-                  {equipe.nomeEquipe}
-                </option>
-              ))}
-            </select>
-            {errors.equipeId && (
-              <span className="text-red-500 text-sm">{errors.equipeId.message}</span>
-            )}
-            {equipes.length === 0 && (
-              <span className="text-yellow-600 text-sm block mt-1">
-                Nenhuma equipe cadastrada. Por favor, cadastre uma equipe primeiro.
-              </span>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Data de Nascimento</label>
-            <input
-              type="date"
-              {...register('dataNascimento', { required: 'Data de nascimento é obrigatória' })}
-              onChange={(e) => verificarIdade(e.target.value)}
-              className="w-full p-2 border rounded-md"
-            />
-            {errors.dataNascimento && (
-              <span className="text-red-500 text-sm">{errors.dataNascimento.message}</span>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input
-              type="email"
-              {...register('email', { 
-                required: 'Email é obrigatório',
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Email inválido'
-                }
-              })}
-              className="w-full p-2 border rounded-md"
-            />
-            {errors.email && (
-              <span className="text-red-500 text-sm">{errors.email.message}</span>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Telefone</label>
-            <input
-              type="tel"
-              {...register('telefone', { required: 'Telefone é obrigatório' })}
-              className="w-full p-2 border rounded-md"
-            />
-            {errors.telefone && (
-              <span className="text-red-500 text-sm">{errors.telefone.message}</span>
-            )}
-          </div>
+    <div className="min-h-screen bg-white">
+      <header className="bg-[#00A3FF] p-4 flex justify-between items-center">
+        <div className="flex items-center">
+          <img src="/logo.png" alt="GP Logo" className="h-12" />
         </div>
+        <button 
+          onClick={() => router.push('/dashboard')}
+          className="text-white hover:text-blue-100"
+        >
+          Voltar
+        </button>
+      </header>
 
-        {isMenorIdade && (
-          <div className="bg-gray-50 p-4 rounded-md space-y-4">
-            <h3 className="font-medium">Dados do Responsável</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <main className="container mx-auto p-8">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-2xl font-bold text-[#1B224B] mb-6">
+            Cadastrar Novo Patinador
+          </h1>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-[#1B224B] mb-2">Nome do Patinador</label>
+              <input 
+                type="text" 
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+                placeholder="Nome completo"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#1B224B] mb-2">CPF</label>
+              <input 
+                type="text" 
+                value={cpf}
+                onChange={handleCPFChange}
+                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+                placeholder="000.000.000-00"
+                required
+                maxLength={14}
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#1B224B] mb-2">Telefone</label>
+              <input 
+                type="tel" 
+                value={telefone}
+                onChange={handleTelefoneChange}
+                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+                placeholder="(00) 00000-0000"
+                required
+                maxLength={15}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Nome do Responsável</label>
-                <input
-                  type="text"
-                  {...register('responsavel.nome', { required: 'Nome do responsável é obrigatório' })}
-                  className="w-full p-2 border rounded-md"
+                <label className="block text-[#1B224B] mb-2">Data de Nascimento</label>
+                <input 
+                  type="date" 
+                  value={dataNascimento}
+                  onChange={(e) => setDataNascimento(e.target.value)}
+                  className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Telefone do Responsável</label>
-                <input
-                  type="tel"
-                  {...register('responsavel.telefone', { required: 'Telefone do responsável é obrigatório' })}
-                  className="w-full p-2 border rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Email do Responsável</label>
-                <input
-                  type="email"
-                  {...register('responsavel.email', { required: 'Email do responsável é obrigatório' })}
-                  className="w-full p-2 border rounded-md"
+                <label className="block text-[#1B224B] mb-2">Idade</label>
+                <input 
+                  type="text" 
+                  value={idade !== null ? `${idade} anos` : ''}
+                  className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+                  readOnly
+                  disabled
                 />
               </div>
             </div>
-          </div>
-        )}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Histórico Médico Relevante</label>
-          <textarea
-            {...register('historicoMedico')}
-            className="w-full p-2 border rounded-md h-24"
-            placeholder="Informe alergias, lesões anteriores, condições médicas relevantes..."
-          />
-        </div>
+            <div>
+              <label className="block text-[#1B224B] mb-2">Equipe</label>
+              <select
+                value={equipeId}
+                onChange={(e) => setEquipeId(e.target.value)}
+                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+                required
+              >
+                <option value="">Selecione uma equipe</option>
+                {equipes.length === 0 ? (
+                  <option value="" disabled>Carregando equipes...</option>
+                ) : (
+                  equipes.map((equipe) => (
+                    <option key={equipe.id} value={equipe.id}>
+                      {equipe.nomeEquipe}
+                    </option>
+                  ))
+                )}
+              </select>
+              {equipes.length === 0 && (
+                <p className="text-sm text-red-500 mt-1">
+                  Nenhuma equipe encontrada. Por favor, cadastre uma equipe primeiro.
+                </p>
+              )}
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Observações Adicionais</label>
-          <textarea
-            {...register('observacoes')}
-            className="w-full p-2 border rounded-md h-24"
-            placeholder="Outras informações relevantes..."
-          />
-        </div>
+            <div>
+              <label className="block text-[#1B224B] mb-2">Exame Médico (PDF)</label>
+              <input 
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setExameMedico(e.target.files?.[0] || null)}
+                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+                required
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Anexe o exame médico em formato PDF
+              </p>
+            </div>
 
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={isLoading || equipes.length === 0}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isLoading ? 'Cadastrando...' : 'Cadastrar Patinador'}
-          </button>
+            <div>
+              <label className="block text-[#1B224B] mb-2">Documento de Identificação (PDF)</label>
+              <input 
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setDocumentoId(e.target.files?.[0] || null)}
+                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+                required
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Anexe uma cópia do documento de identificação em formato PDF
+              </p>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className={`w-full bg-[#00A3FF] text-white py-2 px-4 rounded-lg hover:bg-blue-600
+                ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {loading ? 'Cadastrando...' : 'Cadastrar Patinador'}
+            </button>
+          </form>
         </div>
-      </form>
+      </main>
     </div>
   );
 } 

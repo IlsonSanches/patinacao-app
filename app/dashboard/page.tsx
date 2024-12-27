@@ -1,115 +1,164 @@
 'use client';
-import { useEffect, useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { db } from '@/app/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { PencilIcon } from '@heroicons/react/24/outline';
 
 interface Equipe {
   id: string;
   nomeEquipe: string;
+  responsavel: string;
   email: string;
-  createdAt: string;
+  telefone: string;
+  codigoEquipe: string;
+  cidade: string;
+  estado: string;
+  numeroPatinadoresAtivos: number;
 }
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
   const [equipes, setEquipes] = useState<Equipe[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, signOut } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    const loadEquipes = async () => {
+    const loadEquipesEPatinadores = async () => {
       if (!user) return;
-      
+
       try {
-        const q = query(
+        // Buscar equipes
+        const equipesQuery = query(
           collection(db, 'equipes'),
           where('userId', '==', user.uid)
         );
-        
-        const querySnapshot = await getDocs(q);
-        const equipesData = querySnapshot.docs.map(doc => ({
+        const equipesSnapshot = await getDocs(equipesQuery);
+        const equipesData = equipesSnapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
+          numeroPatinadoresAtivos: 0 // Inicializa com 0
         })) as Equipe[];
-        
+
+        // Buscar patinadores para cada equipe
+        for (let equipe of equipesData) {
+          const patinadoresQuery = query(
+            collection(db, 'patinadores'),
+            where('equipeId', '==', equipe.id)
+          );
+          const patinadoresSnapshot = await getDocs(patinadoresQuery);
+          equipe.numeroPatinadoresAtivos = patinadoresSnapshot.size;
+        }
+
         setEquipes(equipesData);
       } catch (error) {
-        console.error('Erro ao carregar equipes:', error);
-      } finally {
-        setLoading(false);
+        console.error('Erro ao carregar dados:', error);
       }
     };
 
-    loadEquipes();
+    loadEquipesEPatinadores();
   }, [user]);
 
+  const handleEditarEquipe = (equipeId: string) => {
+    router.push(`/dashboard/editar-equipe/${equipeId}`);
+  };
+
   return (
-    <div className="min-h-screen bg-white">
-      <header className="bg-[#00A3FF] p-4 flex justify-between items-center">
-        <div className="flex items-center">
-          <img src="/logo.png" alt="GP Logo" className="h-12" />
-        </div>
-        <div className="flex gap-4">
-          <button 
-            onClick={() => router.push('/dashboard/cadastrar-equipe')}
-            className="text-white hover:text-blue-100"
-          >
-            Cadastrar Equipe
-          </button>
-          <button 
-            onClick={logout}
-            className="text-white hover:text-blue-100"
-          >
-            Sair
-          </button>
-        </div>
-      </header>
-
-      <main className="container mx-auto p-8">
-        <h1 className="text-2xl font-bold text-[#1B224B] mb-6">
-          Minhas Equipes
-        </h1>
-
-        {loading ? (
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : equipes.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Você ainda não cadastrou nenhuma equipe.</p>
-            <button
-              onClick={() => router.push('/dashboard/cadastrar-equipe')}
-              className="mt-4 bg-[#00A3FF] text-white py-2 px-4 rounded-lg hover:bg-blue-600"
-            >
-              Cadastrar Primeira Equipe
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {equipes.map((equipe) => (
-              <div 
-                key={equipe.id}
-                className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-              >
-                <h3 className="text-xl font-semibold text-[#1B224B] mb-2">
-                  {equipe.nomeEquipe}
-                </h3>
-                <p className="text-gray-600 mb-4">{equipe.email}</p>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => router.push(`/dashboard/equipe/${equipe.id}`)}
-                    className="text-[#00A3FF] hover:text-blue-700"
-                  >
-                    Ver Detalhes
-                  </button>
-                </div>
+    <div className="min-h-screen bg-gray-100">
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex">
+              <div className="flex-shrink-0 flex items-center">
+                <img className="h-8 w-auto" src="/logo.png" alt="Logo" />
               </div>
-            ))}
+            </div>
+            <div className="flex items-center">
+              <button
+                onClick={() => signOut()}
+                className="ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Sair
+              </button>
+            </div>
           </div>
-        )}
-      </main>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+            <div className="space-x-4">
+              <button
+                onClick={() => router.push('/dashboard/cadastrar-equipe')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              >
+                Cadastrar Equipe
+              </button>
+              <button
+                onClick={() => router.push('/dashboard/cadastrar-patinador')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              >
+                Cadastrar Patinador
+              </button>
+              <button
+                onClick={() => router.push('/dashboard/cadastrar-juiz')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              >
+                Cadastrar Juiz
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            <ul className="divide-y divide-gray-200">
+              {equipes.map((equipe) => (
+                <li key={equipe.id}>
+                  <div className="px-4 py-4 flex items-center justify-between sm:px-6">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-lg font-medium text-blue-600 truncate">
+                          {equipe.nomeEquipe} - {equipe.codigoEquipe}
+                        </p>
+                        <button
+                          onClick={() => handleEditarEquipe(equipe.id)}
+                          className="ml-2 p-1 text-gray-400 hover:text-blue-600"
+                          title="Editar equipe"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-600">
+                          Responsável: {equipe.responsavel}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Email: {equipe.email} | Telefone: {equipe.telefone}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Localização: {equipe.cidade}, {equipe.estado}
+                        </p>
+                        <p className="text-sm font-semibold text-blue-600 mt-2">
+                          Patinadores Ativos: {equipe.numeroPatinadoresAtivos}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+              {equipes.length === 0 && (
+                <li>
+                  <div className="px-4 py-4 text-center text-gray-500">
+                    Nenhuma equipe cadastrada ainda.
+                  </div>
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 

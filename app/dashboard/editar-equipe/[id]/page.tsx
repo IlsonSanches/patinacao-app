@@ -1,13 +1,18 @@
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { db } from '@/app/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-export default function CadastrarEquipe() {
+interface PageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function EditarEquipe({ params }: PageProps) {
   const [nomeEquipe, setNomeEquipe] = useState('');
   const [codigoEquipe, setCodigoEquipe] = useState('');
   const [responsavel, setResponsavel] = useState('');
@@ -16,18 +21,51 @@ export default function CadastrarEquipe() {
   const [estado, setEstado] = useState('');
   const [cidade, setCidade] = useState('');
   const [observacoes, setObservacoes] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const router = useRouter();
 
-  // Lista de estados brasileiros
   const estados = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 
     'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 
     'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
   ];
 
-  // Formatar código da equipe para maiúsculas
+  // Carregar dados da equipe
+  useEffect(() => {
+    const loadEquipe = async () => {
+      if (!user) return;
+
+      try {
+        const docRef = doc(db, 'equipes', params.id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setNomeEquipe(data.nomeEquipe || '');
+          setCodigoEquipe(data.codigoEquipe || '');
+          setResponsavel(data.responsavel || '');
+          setEmail(data.email || '');
+          setTelefone(data.telefone || '');
+          setEstado(data.estado || '');
+          setCidade(data.cidade || '');
+          setObservacoes(data.observacoes || '');
+        } else {
+          toast.error('Equipe não encontrada');
+          router.push('/dashboard');
+        }
+      } catch (error) {
+        console.error('Erro ao carregar equipe:', error);
+        toast.error('Erro ao carregar dados da equipe');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadEquipe();
+  }, [user, params.id]);
+
+  // Formatar código da equipe
   const handleCodigoEquipe = (value: string) => {
     const formatted = value.toUpperCase().replace(/[^A-Z]/g, '');
     if (formatted.length <= 4) {
@@ -43,7 +81,7 @@ export default function CadastrarEquipe() {
 
   const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatTelefone(e.target.value);
-    if (formatted.length <= 15) { // 15 é o tamanho do telefone formatado
+    if (formatted.length <= 15) {
       setTelefone(formatted);
     }
   };
@@ -59,7 +97,8 @@ export default function CadastrarEquipe() {
     setLoading(true);
 
     try {
-      await addDoc(collection(db, 'equipes'), {
+      const docRef = doc(db, 'equipes', params.id);
+      await updateDoc(docRef, {
         nomeEquipe,
         codigoEquipe,
         responsavel,
@@ -68,19 +107,26 @@ export default function CadastrarEquipe() {
         estado,
         cidade,
         observacoes,
-        userId: user?.uid,
-        createdAt: new Date().toISOString()
+        updatedAt: new Date().toISOString()
       });
 
-      toast.success('Equipe cadastrada com sucesso!');
+      toast.success('Equipe atualizada com sucesso!');
       router.push('/dashboard');
     } catch (error) {
-      console.error('Erro ao cadastrar equipe:', error);
-      toast.error('Erro ao cadastrar equipe');
+      console.error('Erro ao atualizar equipe:', error);
+      toast.error('Erro ao atualizar equipe');
     } finally {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -99,10 +145,11 @@ export default function CadastrarEquipe() {
       <main className="container mx-auto p-8">
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold text-[#1B224B] mb-6">
-            Cadastrar Nova Equipe
+            Editar Equipe
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Os mesmos campos do formulário de cadastro */}
             <div>
               <label className="block text-[#1B224B] mb-2">Nome da Equipe</label>
               <input 
@@ -128,9 +175,6 @@ export default function CadastrarEquipe() {
                 required
                 maxLength={4}
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Digite 4 letras para identificar a equipe
-              </p>
             </div>
 
             <div>
@@ -166,7 +210,6 @@ export default function CadastrarEquipe() {
                 className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
                 placeholder="(00) 00000-0000"
                 required
-                maxLength={15}
               />
             </div>
 
@@ -210,14 +253,24 @@ export default function CadastrarEquipe() {
               />
             </div>
 
-            <button 
-              type="submit" 
-              disabled={loading}
-              className={`w-full bg-[#00A3FF] text-white py-2 px-4 rounded-lg hover:bg-blue-600
-                ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {loading ? 'Cadastrando...' : 'Cadastrar Equipe'}
-            </button>
+            <div className="flex gap-4">
+              <button 
+                type="submit" 
+                disabled={loading}
+                className={`flex-1 bg-[#00A3FF] text-white py-2 px-4 rounded-lg hover:bg-blue-600
+                  ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {loading ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+
+              <button 
+                type="button"
+                onClick={() => router.push('/dashboard')}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300"
+              >
+                Cancelar
+              </button>
+            </div>
           </form>
         </div>
       </main>
