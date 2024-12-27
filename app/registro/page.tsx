@@ -4,6 +4,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Registro() {
   const [email, setEmail] = useState('');
