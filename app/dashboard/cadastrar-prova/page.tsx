@@ -25,13 +25,13 @@ interface FormData {
 }
 
 export default function CadastrarProva() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
     try {
-      setIsLoading(true);
+      setLoading(true);
       const docRef = await addDoc(collection(db, 'provas'), {
         ...data,
         dataCadastro: new Date().toISOString(),
@@ -44,7 +44,7 @@ export default function CadastrarProva() {
       console.error('Erro ao cadastrar prova:', error);
       toast.error('Erro ao cadastrar prova. Tente novamente.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -250,10 +250,10 @@ export default function CadastrarProva() {
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={loading}
             className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            {isLoading ? 'Cadastrando...' : 'Cadastrar Prova'}
+            {loading ? 'Cadastrando...' : 'Cadastrar Prova'}
           </button>
         </div>
       </form>

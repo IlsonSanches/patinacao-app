@@ -1,16 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/app/hooks/useAuth';
-import { db, storage } from '@/app/firebase';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db } from '@/app/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 interface Equipe {
   id: string;
-  nomeEquipe: string;
-  codigoEquipe: string;
+  nome: string;
 }
 
 export default function CadastrarPatinador() {
@@ -145,7 +143,12 @@ export default function CadastrarPatinador() {
     <div className="min-h-screen bg-white">
       <header className="bg-[#00A3FF] p-4 flex justify-between items-center">
         <div className="flex items-center">
-          <img src="/logo.png" alt="GP Logo" className="h-12" />
+          <Image
+            src="/logo.png"
+            alt="GP Logo"
+            width={48}
+            height={48}
+          />
         </div>
         <button 
           onClick={() => router.push('/dashboard')}

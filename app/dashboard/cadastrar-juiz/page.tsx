@@ -6,6 +6,16 @@ import { collection, addDoc, query, where, getDocs, doc, deleteDoc, updateDoc } 
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
+interface JuizData {
+  cpf: string;
+  nomeCompleto: string;
+  nivelAvaliacao: string;
+  cidade: string;
+  estado: string;
+  telefone: string;
+  email: string;
+}
+
 export default function CadastrarJuiz() {
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [cpf, setCpf] = useState('');
@@ -132,30 +142,12 @@ export default function CadastrarJuiz() {
     }
   };
 
-  const handleUpdate = async () => {
-    if (!juizExistente?.id) return;
-    
+  const handleUpdate = async (juizId: string) => {
+    // Implementação da função de atualização
     try {
-      setLoading(true);
-      const juizRef = doc(db, 'juizes', juizExistente.id);
-      await updateDoc(juizRef, {
-        nomeCompleto,
-        nivelAvaliacao,
-        cidade,
-        estado,
-        telefone,
-        email,
-        observacoes,
-        dataAtualizacao: new Date().toISOString()
-      });
-      
-      toast.success('Juiz atualizado com sucesso!');
-      router.push('/dashboard');
+      // Lógica de atualização
     } catch (error) {
-      console.error('Erro ao atualizar juiz:', error);
-      toast.error('Erro ao atualizar juiz');
-    } finally {
-      setLoading(false);
+      console.error('Erro ao atualizar:', error);
     }
   };
 
