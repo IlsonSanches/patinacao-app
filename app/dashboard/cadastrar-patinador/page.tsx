@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 interface Equipe {
   id: string;
   nomeEquipe: string;
+  codigoEquipe: string;
 }
 
 export default function CadastrarPatinador() {
@@ -70,31 +71,28 @@ export default function CadastrarPatinador() {
     }
   }, [dataNascimento]);
 
-  // Carregar equipes
+  // Buscar equipes do Firestore
   useEffect(() => {
-    const loadEquipes = async () => {
-      if (!user) return;
-      
+    const fetchEquipes = async () => {
       try {
-        // Simplificando a query para pegar todas as equipes
         const equipesRef = collection(db, 'equipes');
         const snapshot = await getDocs(equipesRef);
-        
         const equipesData = snapshot.docs.map(doc => ({
           id: doc.id,
-          nomeEquipe: doc.data().nomeEquipe
-        }));
+          ...doc.data(),
+        })) as Equipe[];
         
-        console.log('Equipes carregadas:', equipesData); // Debug
+        // Ordenar equipes por nome
+        equipesData.sort((a, b) => a.nomeEquipe.localeCompare(b.nomeEquipe));
         setEquipes(equipesData);
       } catch (error) {
-        console.error('Erro ao carregar equipes:', error);
+        console.error('Erro ao buscar equipes:', error);
         toast.error('Erro ao carregar equipes');
       }
     };
 
-    loadEquipes();
-  }, [user]);
+    fetchEquipes();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,21 +232,18 @@ export default function CadastrarPatinador() {
                 required
               >
                 <option value="">Selecione uma equipe</option>
-                {equipes.length === 0 ? (
-                  <option value="" disabled>Carregando equipes...</option>
-                ) : (
+                {equipes.length > 0 ? (
                   equipes.map((equipe) => (
                     <option key={equipe.id} value={equipe.id}>
-                      {equipe.nomeEquipe}
+                      {equipe.nomeEquipe} ({equipe.codigoEquipe})
                     </option>
                   ))
+                ) : (
+                  <option value="" disabled>
+                    Nenhuma equipe encontrada. Por favor, cadastre uma equipe primeiro.
+                  </option>
                 )}
               </select>
-              {equipes.length === 0 && (
-                <p className="text-sm text-red-500 mt-1">
-                  Nenhuma equipe encontrada. Por favor, cadastre uma equipe primeiro.
-                </p>
-              )}
             </div>
 
             <div>

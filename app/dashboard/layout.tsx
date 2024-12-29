@@ -2,12 +2,14 @@
 
 import ProtectedRoute from '@/src/components/ProtectedRoute';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { 
   UserCircleIcon, 
   UsersIcon, 
   UserGroupIcon, 
   ScaleIcon,
-  TrophyIcon 
+  TrophyIcon,
+  UserPlusIcon 
 } from '@heroicons/react/24/outline';
 
 export default function DashboardLayout({
@@ -15,6 +17,8 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen">
@@ -55,6 +59,24 @@ export default function DashboardLayout({
             >
               <TrophyIcon className="h-5 w-5" />
               <span>Cadastrar Prova</span>
+            </Link>
+            <Link
+              href="/dashboard/juizes"
+              className={`flex items-center p-2 rounded-lg hover:bg-gray-100 ${
+                pathname === '/dashboard/juizes' ? 'bg-gray-100' : ''
+              }`}
+            >
+              <UserGroupIcon className="h-6 w-6 text-gray-600" />
+              <span className="ml-3">Juízes</span>
+            </Link>
+            <Link
+              href="/dashboard/cadastrar-juiz"
+              className={`flex items-center p-2 rounded-lg hover:bg-gray-100 ${
+                pathname === '/dashboard/cadastrar-juiz' ? 'bg-gray-100' : ''
+              }`}
+            >
+              <UserPlusIcon className="h-6 w-6 text-gray-600" />
+              <span className="ml-3">Cadastrar Juiz</span>
             </Link>
           </nav>
         </aside>

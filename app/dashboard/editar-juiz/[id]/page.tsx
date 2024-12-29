@@ -1,12 +1,11 @@
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { db } from '@/app/firebase';
-import { collection, addDoc, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-export default function CadastrarJuiz() {
+export default function EditarJuiz({ params }: { params: { id: string } }) {
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [cpf, setCpf] = useState('');
   const [nivelAvaliacao, setNivelAvaliacao] = useState('');
@@ -15,8 +14,7 @@ export default function CadastrarJuiz() {
   const [telefone, setTelefone] = useState('');
   const [email, setEmail] = useState('');
   const [observacoes, setObservacoes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [juizExistente, setJuizExistente] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const estados = [
@@ -31,126 +29,70 @@ export default function CadastrarJuiz() {
     'Internacional'
   ];
 
-  // Formatar CPF enquanto digita
-  const formatarCPF = (value: string) => {
-    const numeros = value.replace(/\D/g, '');
-    if (numeros.length <= 11) {
-      let cpfFormatado = numeros;
-      if (numeros.length > 3) {
-        cpfFormatado = `${numeros.slice(0, 3)}.${numeros.slice(3)}`;
-      }
-      if (numeros.length > 6) {
-        cpfFormatado = `${cpfFormatado.slice(0, 7)}.${numeros.slice(6)}`;
-      }
-      if (numeros.length > 9) {
-        cpfFormatado = `${cpfFormatado.slice(0, 11)}-${numeros.slice(9)}`;
-      }
-      setCpf(cpfFormatado);
-    }
-  };
-
-  // Verificar se juiz já existe
-  const verificarJuizExistente = async (cpfValue: string) => {
-    const cpfNumeros = cpfValue.replace(/\D/g, '');
-    if (cpfNumeros.length === 11) {
+  useEffect(() => {
+    const carregarJuiz = async () => {
       try {
+        setLoading(true);
         const juizesRef = collection(db, 'juizes');
-        const q = query(juizesRef, where('cpf', '==', cpfValue));
+        const q = query(juizesRef, where('cpf', '==', params.id));
         const querySnapshot = await getDocs(q);
-        
+
         if (!querySnapshot.empty) {
           const juizDoc = querySnapshot.docs[0];
-          setJuizExistente({
-            id: juizDoc.id,
-            ...juizDoc.data()
-          });
-          toast.error('CPF já cadastrado. Escolha uma ação abaixo.');
+          const dados = juizDoc.data();
+          
+          setNomeCompleto(dados.nomeCompleto || '');
+          setCpf(dados.cpf || '');
+          setNivelAvaliacao(dados.nivelAvaliacao || '');
+          setCidade(dados.cidade || '');
+          setEstado(dados.estado || '');
+          setTelefone(dados.telefone || '');
+          setEmail(dados.email || '');
+          setObservacoes(dados.observacoes || '');
         } else {
-          setJuizExistente(null);
+          toast.error('Juiz não encontrado');
+          router.push('/dashboard');
         }
       } catch (error) {
-        console.error('Erro ao verificar CPF:', error);
-        toast.error('Erro ao verificar CPF');
+        console.error('Erro ao carregar juiz:', error);
+        toast.error('Erro ao carregar dados do juiz');
+        router.push('/dashboard');
+      } finally {
+        setLoading(false);
       }
+    };
+
+    if (params.id) {
+      carregarJuiz();
     }
-  };
+  }, [params.id, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const juizData = {
-        nomeCompleto,
-        cpf,
-        nivelAvaliacao,
-        cidade,
-        estado,
-        telefone,
-        email,
-        observacoes,
-        dataCadastro: new Date().toISOString(),
-        status: 'ativo'
-      };
+      const juizesRef = collection(db, 'juizes');
+      const q = query(juizesRef, where('cpf', '==', cpf));
+      const querySnapshot = await getDocs(q);
 
-      const docRef = await addDoc(collection(db, 'juizes'), juizData);
-      
-      if (docRef.id) {
-        toast.success('Juiz cadastrado com sucesso!');
+      if (!querySnapshot.empty) {
+        const juizDoc = querySnapshot.docs[0];
+        
+        await updateDoc(juizDoc.ref, {
+          nomeCompleto,
+          nivelAvaliacao,
+          cidade,
+          estado,
+          telefone,
+          email,
+          observacoes,
+          dataAtualizacao: new Date().toISOString()
+        });
+
+        toast.success('Juiz atualizado com sucesso!');
         router.push('/dashboard');
       }
-    } catch (error) {
-      console.error('Erro ao cadastrar juiz:', error);
-      toast.error('Erro ao cadastrar juiz');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!juizExistente?.id) return;
-    
-    try {
-      setLoading(true);
-      await deleteDoc(doc(db, 'juizes', juizExistente.id));
-      toast.success('Juiz deletado com sucesso!');
-      setJuizExistente(null);
-      // Limpar formulário
-      setCpf('');
-      setNomeCompleto('');
-      setEmail('');
-      setTelefone('');
-      setCidade('');
-      setEstado('');
-      setNivelAvaliacao('');
-      setObservacoes('');
-    } catch (error) {
-      console.error('Erro ao deletar juiz:', error);
-      toast.error('Erro ao deletar juiz');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!juizExistente?.id) return;
-    
-    try {
-      setLoading(true);
-      const juizRef = doc(db, 'juizes', juizExistente.id);
-      await updateDoc(juizRef, {
-        nomeCompleto,
-        nivelAvaliacao,
-        cidade,
-        estado,
-        telefone,
-        email,
-        observacoes,
-        dataAtualizacao: new Date().toISOString()
-      });
-      
-      toast.success('Juiz atualizado com sucesso!');
-      router.push('/dashboard');
     } catch (error) {
       console.error('Erro ao atualizar juiz:', error);
       toast.error('Erro ao atualizar juiz');
@@ -159,10 +101,20 @@ export default function CadastrarJuiz() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500">Carregando dados do juiz...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-8">Cadastrar Novo Juiz</h1>
+        <h1 className="text-2xl font-bold mb-8">Editar Juiz</h1>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -170,39 +122,10 @@ export default function CadastrarJuiz() {
             <input
               type="text"
               value={cpf}
-              onChange={(e) => {
-                formatarCPF(e.target.value);
-                verificarJuizExistente(e.target.value);
-              }}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-              placeholder="000.000.000-00"
+              disabled
+              className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm"
             />
           </div>
-
-          {juizExistente && (
-            <div className="bg-yellow-50 p-4 rounded-md">
-              <p className="text-yellow-700">Juiz já cadastrado com este CPF.</p>
-              <div className="mt-4 flex space-x-4">
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
-                  disabled={loading}
-                >
-                  Deletar Cadastro
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push(`/dashboard/editar-juiz/${cpf}`)}
-                  className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700"
-                  disabled={loading}
-                >
-                  Atualizar Dados
-                </button>
-              </div>
-            </div>
-          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700">Nome Completo</label>
@@ -298,14 +221,14 @@ export default function CadastrarJuiz() {
             </button>
             <button
               type="submit"
-              disabled={loading || juizExistente !== null}
+              disabled={loading}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? 'Cadastrando...' : 'Cadastrar Juiz'}
+              {loading ? 'Salvando...' : 'Salvar Alterações'}
             </button>
           </div>
         </form>
       </div>
     </div>
   );
-}
+} 
