@@ -263,6 +263,26 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      <aside className="w-64 bg-white shadow-md">
+        <nav className="mt-5 px-2">
+          <a href="#" className="group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-900 rounded-md hover:text-gray-900 hover:bg-gray-50">
+            Dashboard
+          </a>
+          <a href="/dashboard/cadastrar-juiz" className="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-600 rounded-md hover:text-gray-900 hover:bg-gray-50">
+            Cadastrar Juiz
+          </a>
+          <a href="/dashboard/cadastrar-equipe" className="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-600 rounded-md hover:text-gray-900 hover:bg-gray-50">
+            Cadastrar Equipe
+          </a>
+          <a href="/dashboard/cadastrar-patinador" className="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-600 rounded-md hover:text-gray-900 hover:bg-gray-50">
+            Cadastrar Patinador
+          </a>
+          <a href="/dashboard/cadastrar-prova" className="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-600 rounded-md hover:text-gray-900 hover:bg-gray-50">
+            Cadastrar Prova
+          </a>
+        </nav>
+      </aside>
     </div>
   );
 } 

@@ -1,10 +1,21 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { db } from '@/app/firebase';
-import { collection, getDocs } from 'firebase/firestore';
-import Image from 'next/image';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+
+interface PatinadorData {
+  nome: string;
+  dataNascimento: string;
+  cpf: string;
+  equipe: string;
+  categoria: string;
+  cidade: string;
+  estado: string;
+  telefone: string;
+  email: string;
+}
 
 interface Equipe {
   id: string;
@@ -12,76 +23,42 @@ interface Equipe {
 }
 
 export default function CadastrarPatinador() {
-  const [nome, setNome] = useState('');
-  const [cpf, setCpf] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [dataNascimento, setDataNascimento] = useState('');
-  const [idade, setIdade] = useState<number | null>(null);
-  const [equipeId, setEquipeId] = useState('');
-  const [equipes, setEquipes] = useState<Equipe[]>([]);
-  const [exameMedico, setExameMedico] = useState<File | null>(null);
-  const [documentoId, setDocumentoId] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [equipes, setEquipes] = useState<Equipe[]>([]);
+  const [formData, setFormData] = useState<PatinadorData>({
+    nome: '',
+    dataNascimento: '',
+    cpf: '',
+    equipe: '',
+    categoria: '',
+    cidade: '',
+    estado: '',
+    telefone: '',
+    email: ''
+  });
 
-  // Formatar CPF
-  const formatCPF = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/g, '$1.$2.$3-$4');
-  };
+  const estados = [
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
+    'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
+    'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+  ];
 
-  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCPF(e.target.value);
-    if (formatted.length <= 14) { // 14 é o tamanho do CPF formatado
-      setCpf(formatted);
-    }
-  };
+  const categorias = [
+    'Iniciante',
+    'Intermediário',
+    'Avançado',
+    'Elite'
+  ];
 
-  // Formatar telefone
-  const formatTelefone = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers.replace(/(\d{2})(\d{5})(\d{4})/g, '($1) $2-$3');
-  };
-
-  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatTelefone(e.target.value);
-    if (formatted.length <= 15) { // 15 é o tamanho do telefone formatado
-      setTelefone(formatted);
-    }
-  };
-
-  // Calcular idade
-  useEffect(() => {
-    if (dataNascimento) {
-      const nascimento = new Date(dataNascimento);
-      const hoje = new Date();
-      let idade = hoje.getFullYear() - nascimento.getFullYear();
-      const mes = hoje.getMonth() - nascimento.getMonth();
-      
-      if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
-        idade--;
-      }
-      
-      setIdade(idade);
-    } else {
-      setIdade(null);
-    }
-  }, [dataNascimento]);
-
-  // Buscar equipes do Firestore
   useEffect(() => {
     const fetchEquipes = async () => {
       try {
-        const equipesRef = collection(db, 'equipes');
-        const snapshot = await getDocs(equipesRef);
-        const equipesData = snapshot.docs.map(doc => ({
+        const querySnapshot = await getDocs(collection(db, 'equipes'));
+        const equipesData = querySnapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data(),
-        })) as Equipe[];
-        
-        // Ordenar equipes por nome
-        equipesData.sort((a, b) => a.nomeEquipe.localeCompare(b.nomeEquipe));
+          nome: doc.data().nome
+        }));
         setEquipes(equipesData);
       } catch (error) {
         console.error('Erro ao buscar equipes:', error);
@@ -92,41 +69,15 @@ export default function CadastrarPatinador() {
     fetchEquipes();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      let exameMedicoUrl = '';
-      let documentoIdUrl = '';
-
-      if (exameMedico) {
-        const exameMedicoRef = ref(storage, `exames-medicos/${Date.now()}-${exameMedico.name}`);
-        await uploadBytes(exameMedicoRef, exameMedico);
-        exameMedicoUrl = await getDownloadURL(exameMedicoRef);
-      }
-
-      if (documentoId) {
-        const documentoIdRef = ref(storage, `documentos-id/${Date.now()}-${documentoId.name}`);
-        await uploadBytes(documentoIdRef, documentoId);
-        documentoIdUrl = await getDownloadURL(documentoIdRef);
-      }
-
-      // Encontrar o nome da equipe selecionada
-      const equipeSelected = equipes.find(eq => eq.id === equipeId);
-
       await addDoc(collection(db, 'patinadores'), {
-        nome,
-        cpf,
-        telefone,
-        dataNascimento,
-        idade,
-        equipeId,
-        equipeNome: equipeSelected?.nomeEquipe || '',
-        exameMedicoUrl,
-        documentoIdUrl,
-        userId: user?.uid,
-        createdAt: new Date().toISOString()
+        ...formData,
+        dataCadastro: new Date().toISOString(),
+        status: 'ativo'
       });
 
       toast.success('Patinador cadastrado com sucesso!');
@@ -139,155 +90,171 @@ export default function CadastrarPatinador() {
     }
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   return (
-    <div className="min-h-screen bg-white">
-      <header className="bg-[#00A3FF] p-4 flex justify-between items-center">
-        <div className="flex items-center">
-          <Image
-            src="/logo.png"
-            alt="GP Logo"
-            width={48}
-            height={48}
-          />
-        </div>
-        <button 
-          onClick={() => router.push('/dashboard')}
-          className="text-white hover:text-blue-100"
-        >
-          Voltar
-        </button>
-      </header>
-
-      <main className="container mx-auto p-8">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-2xl font-bold text-[#1B224B] mb-6">
-            Cadastrar Novo Patinador
-          </h1>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-[#1B224B] mb-2">Nome do Patinador</label>
-              <input 
-                type="text" 
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
-                placeholder="Nome completo"
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">Cadastrar Novo Patinador</h1>
+        
+        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nome Completo
+              </label>
+              <input
+                type="text"
+                name="nome"
+                value={formData.nome}
+                onChange={handleChange}
                 required
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-[#1B224B] mb-2">CPF</label>
-              <input 
-                type="text" 
-                value={cpf}
-                onChange={handleCPFChange}
-                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
-                placeholder="000.000.000-00"
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Data de Nascimento
+              </label>
+              <input
+                type="date"
+                name="dataNascimento"
+                value={formData.dataNascimento}
+                onChange={handleChange}
                 required
-                maxLength={14}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-[#1B224B] mb-2">Telefone</label>
-              <input 
-                type="tel" 
-                value={telefone}
-                onChange={handleTelefoneChange}
-                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
-                placeholder="(00) 00000-0000"
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                CPF
+              </label>
+              <input
+                type="text"
+                name="cpf"
+                value={formData.cpf}
+                onChange={handleChange}
                 required
-                maxLength={15}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[#1B224B] mb-2">Data de Nascimento</label>
-                <input 
-                  type="date" 
-                  value={dataNascimento}
-                  onChange={(e) => setDataNascimento(e.target.value)}
-                  className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[#1B224B] mb-2">Idade</label>
-                <input 
-                  type="text" 
-                  value={idade !== null ? `${idade} anos` : ''}
-                  className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
-                  readOnly
-                  disabled
-                />
-              </div>
-            </div>
-
             <div>
-              <label className="block text-[#1B224B] mb-2">Equipe</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Equipe
+              </label>
               <select
-                value={equipeId}
-                onChange={(e) => setEquipeId(e.target.value)}
-                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+                name="equipe"
+                value={formData.equipe}
+                onChange={handleChange}
                 required
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Selecione uma equipe</option>
-                {equipes.length > 0 ? (
-                  equipes.map((equipe) => (
-                    <option key={equipe.id} value={equipe.id}>
-                      {equipe.nomeEquipe} ({equipe.codigoEquipe})
-                    </option>
-                  ))
-                ) : (
-                  <option value="" disabled>
-                    Nenhuma equipe encontrada. Por favor, cadastre uma equipe primeiro.
-                  </option>
-                )}
+                {equipes.map(equipe => (
+                  <option key={equipe.id} value={equipe.id}>{equipe.nome}</option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-[#1B224B] mb-2">Exame Médico (PDF)</label>
-              <input 
-                type="file"
-                accept=".pdf"
-                onChange={(e) => setExameMedico(e.target.files?.[0] || null)}
-                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Categoria
+              </label>
+              <select
+                name="categoria"
+                value={formData.categoria}
+                onChange={handleChange}
                 required
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Anexe o exame médico em formato PDF
-              </p>
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Selecione uma categoria</option>
+                {categorias.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
 
             <div>
-              <label className="block text-[#1B224B] mb-2">Documento de Identificação (PDF)</label>
-              <input 
-                type="file"
-                accept=".pdf"
-                onChange={(e) => setDocumentoId(e.target.files?.[0] || null)}
-                className="w-full p-2 border rounded-lg bg-[#F8F9FE]"
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Estado
+              </label>
+              <select
+                name="estado"
+                value={formData.estado}
+                onChange={handleChange}
                 required
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Anexe uma cópia do documento de identificação em formato PDF
-              </p>
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Selecione um estado</option>
+                {estados.map(uf => (
+                  <option key={uf} value={uf}>{uf}</option>
+                ))}
+              </select>
             </div>
 
-            <button 
-              type="submit" 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Cidade
+              </label>
+              <input
+                type="text"
+                name="cidade"
+                value={formData.cidade}
+                onChange={handleChange}
+                required
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Telefone
+              </label>
+              <input
+                type="tel"
+                name="telefone"
+                value={formData.telefone}
+                onChange={handleChange}
+                required
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-6">
+            <button
+              type="submit"
               disabled={loading}
-              className={`w-full bg-[#00A3FF] text-white py-2 px-4 rounded-lg hover:bg-blue-600
-                ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {loading ? 'Cadastrando...' : 'Cadastrar Patinador'}
             </button>
-          </form>
-        </div>
-      </main>
+          </div>
+        </form>
+      </div>
     </div>
   );
 } 
