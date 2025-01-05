@@ -9,7 +9,9 @@ import {
   UserGroupIcon, 
   ScaleIcon,
   TrophyIcon,
-  UserPlusIcon 
+  UserPlusIcon,
+  TagIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 
 export default function DashboardLayout({
@@ -54,29 +56,39 @@ export default function DashboardLayout({
               <span>Cadastrar Patinador</span>
             </Link>
             <Link 
-              href="/dashboard/cadastrar-prova"
+              href="/dashboard/cadastrar-torneio"
               className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
             >
               <TrophyIcon className="h-5 w-5" />
-              <span>Cadastrar Prova</span>
+              <span>Cadastrar Torneio</span>
+            </Link>
+            <Link 
+              href="/dashboard/cadastrar-modalidade"
+              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
+            >
+              <TagIcon className="h-5 w-5" />
+              <span>Cadastrar Modalidade</span>
             </Link>
             <Link
               href="/dashboard/juizes"
-              className={`flex items-center p-2 rounded-lg hover:bg-gray-100 ${
-                pathname === '/dashboard/juizes' ? 'bg-gray-100' : ''
-              }`}
+              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
             >
-              <UserGroupIcon className="h-6 w-6 text-gray-600" />
-              <span className="ml-3">Juízes</span>
+              <ScaleIcon className="h-5 w-5" />
+              <span>Juízes</span>
             </Link>
             <Link
-              href="/dashboard/cadastrar-juiz"
-              className={`flex items-center p-2 rounded-lg hover:bg-gray-100 ${
-                pathname === '/dashboard/cadastrar-juiz' ? 'bg-gray-100' : ''
-              }`}
+              href="/dashboard/torneios"
+              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
             >
-              <UserPlusIcon className="h-6 w-6 text-gray-600" />
-              <span className="ml-3">Cadastrar Juiz</span>
+              <ClipboardDocumentListIcon className="h-5 w-5" />
+              <span>Torneios</span>
+            </Link>
+            <Link
+              href="/dashboard/modalidades"
+              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
+            >
+              <TagIcon className="h-5 w-5" />
+              <span>Modalidades</span>
             </Link>
           </nav>
         </aside>
