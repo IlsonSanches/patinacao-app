@@ -3,15 +3,17 @@
 import ProtectedRoute from '@/src/components/ProtectedRoute';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { 
   UserCircleIcon, 
   UsersIcon, 
   UserGroupIcon, 
   ScaleIcon,
   TrophyIcon,
-  UserPlusIcon,
   TagIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 
 export default function DashboardLayout({
@@ -20,82 +22,74 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
+  const menuItems = [
+    { href: '/dashboard', icon: UsersIcon, text: 'Dashboard' },
+    { href: '/dashboard/cadastrar-equipe', icon: UserGroupIcon, text: 'Cadastrar Equipe' },
+    { href: '/dashboard/cadastrar-juiz', icon: ScaleIcon, text: 'Cadastrar Juiz' },
+    { href: '/dashboard/cadastrar-patinador', icon: UserCircleIcon, text: 'Cadastrar Patinador' },
+    { href: '/dashboard/cadastrar-torneio', icon: TrophyIcon, text: 'Cadastrar Torneio' },
+    { href: '/dashboard/cadastrar-modalidade', icon: TagIcon, text: 'Cadastrar Modalidade' },
+    { href: '/dashboard/juizes', icon: ScaleIcon, text: 'Juízes' },
+    { href: '/dashboard/torneios', icon: ClipboardDocumentListIcon, text: 'Torneios' },
+    { href: '/dashboard/modalidades', icon: TagIcon, text: 'Modalidades' }
+  ];
+
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen">
+        {/* Botão do Menu Mobile */}
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded-md md:hidden"
+        >
+          {isSidebarOpen ? (
+            <XMarkIcon className="h-6 w-6" />
+          ) : (
+            <Bars3Icon className="h-6 w-6" />
+          )}
+        </button>
+
+        {/* Overlay para dispositivos móveis */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className="w-64 bg-gray-800 text-white p-6">
-          <nav className="space-y-2">
-            <Link 
-              href="/dashboard"
-              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
-            >
-              <UsersIcon className="h-5 w-5" />
-              <span>Dashboard</span>
-            </Link>
-            <Link 
-              href="/dashboard/cadastrar-equipe"
-              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
-            >
-              <UserGroupIcon className="h-5 w-5" />
-              <span>Cadastrar Equipe</span>
-            </Link>
-            <Link 
-              href="/dashboard/cadastrar-juiz"
-              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
-            >
-              <ScaleIcon className="h-5 w-5" />
-              <span>Cadastrar Juiz</span>
-            </Link>
-            <Link 
-              href="/dashboard/cadastrar-patinador"
-              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
-            >
-              <UserCircleIcon className="h-5 w-5" />
-              <span>Cadastrar Patinador</span>
-            </Link>
-            <Link 
-              href="/dashboard/cadastrar-torneio"
-              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
-            >
-              <TrophyIcon className="h-5 w-5" />
-              <span>Cadastrar Torneio</span>
-            </Link>
-            <Link 
-              href="/dashboard/cadastrar-modalidade"
-              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
-            >
-              <TagIcon className="h-5 w-5" />
-              <span>Cadastrar Modalidade</span>
-            </Link>
-            <Link
-              href="/dashboard/juizes"
-              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
-            >
-              <ScaleIcon className="h-5 w-5" />
-              <span>Juízes</span>
-            </Link>
-            <Link
-              href="/dashboard/torneios"
-              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
-            >
-              <ClipboardDocumentListIcon className="h-5 w-5" />
-              <span>Torneios</span>
-            </Link>
-            <Link
-              href="/dashboard/modalidades"
-              className="flex items-center space-x-2 p-2 hover:bg-gray-700 rounded-md"
-            >
-              <TagIcon className="h-5 w-5" />
-              <span>Modalidades</span>
-            </Link>
-          </nav>
+        <aside className={`
+          fixed inset-y-0 left-0 z-40 w-64 bg-gray-800 text-white transform transition-transform duration-300 ease-in-out
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:relative md:translate-x-0
+        `}>
+          <div className="p-6">
+            <nav className="space-y-2">
+              {menuItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={`
+                    flex items-center space-x-2 p-2 rounded-md transition-colors
+                    ${pathname === item.href ? 'bg-gray-700 text-white' : 'hover:bg-gray-700'}
+                  `}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.text}</span>
+                </Link>
+              ))}
+            </nav>
+          </div>
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 bg-gray-100">
-          {children}
+        <main className="flex-1 bg-gray-100 md:ml-64">
+          <div className="p-4 md:p-8">
+            {children}
+          </div>
         </main>
       </div>
     </ProtectedRoute>
