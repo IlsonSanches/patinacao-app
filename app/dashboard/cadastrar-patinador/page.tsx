@@ -19,7 +19,7 @@ interface PatinadorData {
 
 interface Equipe {
   id: string;
-  nome: string;
+  nomeEquipe: string;
 }
 
 export default function CadastrarPatinador() {
@@ -57,7 +57,7 @@ export default function CadastrarPatinador() {
         const querySnapshot = await getDocs(collection(db, 'equipes'));
         const equipesData = querySnapshot.docs.map(doc => ({
           id: doc.id,
-          nome: doc.data().nome
+          nomeEquipe: doc.data().nomeEquipe
         }));
         setEquipes(equipesData);
       } catch (error) {
@@ -160,7 +160,7 @@ export default function CadastrarPatinador() {
               >
                 <option value="">Selecione uma equipe</option>
                 {equipes.map(equipe => (
-                  <option key={equipe.id} value={equipe.id}>{equipe.nome}</option>
+                  <option key={equipe.id} value={equipe.id}>{equipe.nomeEquipe}</option>
                 ))}
               </select>
             </div>
