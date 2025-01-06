@@ -26,14 +26,10 @@ export default function DashboardLayout({
   
   const menuItems = [
     { href: '/dashboard', icon: UsersIcon, text: 'Dashboard' },
-    { href: '/dashboard/cadastrar-equipe', icon: UserGroupIcon, text: 'Cadastrar Equipe' },
-    { href: '/dashboard/cadastrar-juiz', icon: ScaleIcon, text: 'Cadastrar Juiz' },
-    { href: '/dashboard/cadastrar-patinador', icon: UserCircleIcon, text: 'Cadastrar Patinador' },
-    { href: '/dashboard/cadastrar-torneio', icon: TrophyIcon, text: 'Cadastrar Torneio' },
-    { href: '/dashboard/cadastrar-modalidade', icon: TagIcon, text: 'Cadastrar Modalidade' },
-    { href: '/dashboard/cadastrar-categoria', icon: TagIcon, text: 'Cadastrar Categoria' },
+    { href: '/dashboard/equipes', icon: UserGroupIcon, text: 'Equipes' },
     { href: '/dashboard/juizes', icon: ScaleIcon, text: 'Juízes' },
-    { href: '/dashboard/torneios', icon: ClipboardDocumentListIcon, text: 'Torneios' },
+    { href: '/dashboard/patinadores', icon: UserCircleIcon, text: 'Patinadores' },
+    { href: '/dashboard/torneios', icon: TrophyIcon, text: 'Torneios' },
     { href: '/dashboard/modalidades', icon: TagIcon, text: 'Modalidades' },
     { href: '/dashboard/categorias', icon: TagIcon, text: 'Categorias' }
   ];

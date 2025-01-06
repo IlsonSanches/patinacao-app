@@ -1,58 +1,66 @@
 'use client';
-
 import { useState, useEffect } from 'react';
+import { db } from '@/app/firebase';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/src/lib/firebase';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-interface Torneio {
+interface Patinador {
   id: string;
-  nomeTorneio: string;
-  dataRealizacao: string;
+  nome: string;
+  dataNascimento: string;
+  cpf: string;
+  equipe: string;
+  categoria: string;
   cidade: string;
   estado: string;
-  dataMaximaInscricao: string;
+  telefone: string;
+  email: string;
   dataCadastro: string;
 }
 
-export default function ListaTorneios() {
-  const [torneios, setTorneios] = useState<Torneio[]>([]);
+export default function ListaPatinadores() {
+  const [patinadores, setPatinadores] = useState<Patinador[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    carregarTorneios();
+    carregarPatinadores();
   }, []);
 
-  const carregarTorneios = async () => {
+  const carregarPatinadores = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'torneios'));
-      const torneiosData = querySnapshot.docs.map(doc => ({
+      const querySnapshot = await getDocs(collection(db, 'patinadores'));
+      const patinadoresData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Torneio[];
+      })) as Patinador[];
       
-      // Ordenar por data de realização
-      torneiosData.sort((a, b) => new Date(a.dataRealizacao).getTime() - new Date(b.dataRealizacao).getTime());
-      setTorneios(torneiosData);
+      // Ordenar por nome com verificação de segurança
+      patinadoresData.sort((a, b) => {
+        const nomeA = a.nome || '';
+        const nomeB = b.nome || '';
+        return nomeA.localeCompare(nomeB);
+      });
+      
+      setPatinadores(patinadoresData);
     } catch (error) {
-      console.error('Erro ao carregar torneios:', error);
-      toast.error('Erro ao carregar torneios');
+      console.error('Erro ao carregar patinadores:', error);
+      toast.error('Erro ao carregar patinadores');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeletar = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este torneio?')) {
+    if (window.confirm('Tem certeza que deseja excluir este patinador?')) {
       try {
-        await deleteDoc(doc(db, 'torneios', id));
-        toast.success('Torneio excluído com sucesso!');
-        carregarTorneios();
+        await deleteDoc(doc(db, 'patinadores', id));
+        toast.success('Patinador excluído com sucesso!');
+        carregarPatinadores();
       } catch (error) {
-        console.error('Erro ao excluir torneio:', error);
-        toast.error('Erro ao excluir torneio');
+        console.error('Erro ao excluir patinador:', error);
+        toast.error('Erro ao excluir patinador');
       }
     }
   };
@@ -61,7 +69,7 @@ export default function ListaTorneios() {
     return (
       <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500">Carregando torneios...</p>
+          <p className="text-gray-500">Carregando patinadores...</p>
         </div>
       </div>
     );
@@ -71,18 +79,18 @@ export default function ListaTorneios() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Lista de Torneios</h1>
+          <h1 className="text-2xl font-bold">Lista de Patinadores</h1>
           <button
-            onClick={() => router.push('/dashboard/cadastrar-torneio')}
+            onClick={() => router.push('/dashboard/cadastrar-patinador')}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
           >
-            Cadastrar Novo Torneio
+            Cadastrar Novo Patinador
           </button>
         </div>
 
-        {torneios.length === 0 ? (
+        {patinadores.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">Nenhum torneio cadastrado.</p>
+            <p className="text-gray-500">Nenhum patinador cadastrado.</p>
           </div>
         ) : (
           <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -91,19 +99,22 @@ export default function ListaTorneios() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nome do Torneio
+                      Nome
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data de Realização
+                      CPF
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Equipe
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Categoria
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Cidade/Estado
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data Máxima Inscrição
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data de Cadastro
+                      Contato
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ações
@@ -111,42 +122,51 @@ export default function ListaTorneios() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {torneios.map((torneio) => (
-                    <tr key={torneio.id} className="hover:bg-gray-50">
+                  {patinadores.map((patinador) => (
+                    <tr key={patinador.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {torneio.nomeTorneio}
+                          {patinador.nome}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(patinador.dataNascimento).toLocaleDateString('pt-BR')}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">
-                          {new Date(torneio.dataRealizacao).toLocaleDateString('pt-BR')}
+                          {patinador.cpf}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">
-                          {torneio.cidade}/{torneio.estado}
+                          {patinador.equipe}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">
-                          {new Date(torneio.dataMaximaInscricao).toLocaleDateString('pt-BR')}
+                          {patinador.categoria}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">
-                          {new Date(torneio.dataCadastro).toLocaleDateString('pt-BR')}
+                          {patinador.cidade}/{patinador.estado}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">
+                          <div>{patinador.email}</div>
+                          <div>{patinador.telefone}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button
-                          onClick={() => router.push(`/dashboard/editar-torneio/${torneio.id}`)}
+                          onClick={() => router.push(`/dashboard/editar-patinador/${patinador.id}`)}
                           className="text-blue-600 hover:text-blue-900 mr-4"
                         >
                           Editar
                         </button>
                         <button
-                          onClick={() => handleDeletar(torneio.id)}
+                          onClick={() => handleDeletar(patinador.id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           Excluir
@@ -162,4 +182,4 @@ export default function ListaTorneios() {
       </div>
     </div>
   );
-}
+} 

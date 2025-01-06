@@ -1,58 +1,63 @@
 'use client';
-
 import { useState, useEffect } from 'react';
+import { db } from '@/app/firebase';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/src/lib/firebase';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-interface Torneio {
+interface Equipe {
   id: string;
-  nomeTorneio: string;
-  dataRealizacao: string;
+  nomeEquipe: string;
   cidade: string;
   estado: string;
-  dataMaximaInscricao: string;
+  responsavel: string;
+  telefone: string;
+  email: string;
   dataCadastro: string;
 }
 
-export default function ListaTorneios() {
-  const [torneios, setTorneios] = useState<Torneio[]>([]);
+export default function ListaEquipes() {
+  const [equipes, setEquipes] = useState<Equipe[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    carregarTorneios();
+    carregarEquipes();
   }, []);
 
-  const carregarTorneios = async () => {
+  const carregarEquipes = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'torneios'));
-      const torneiosData = querySnapshot.docs.map(doc => ({
+      const querySnapshot = await getDocs(collection(db, 'equipes'));
+      const equipesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Torneio[];
+      })) as Equipe[];
       
-      // Ordenar por data de realização
-      torneiosData.sort((a, b) => new Date(a.dataRealizacao).getTime() - new Date(b.dataRealizacao).getTime());
-      setTorneios(torneiosData);
+      // Ordenar por nome com verificação de segurança
+      equipesData.sort((a, b) => {
+        const nomeA = a.nomeEquipe || '';
+        const nomeB = b.nomeEquipe || '';
+        return nomeA.localeCompare(nomeB);
+      });
+      
+      setEquipes(equipesData);
     } catch (error) {
-      console.error('Erro ao carregar torneios:', error);
-      toast.error('Erro ao carregar torneios');
+      console.error('Erro ao carregar equipes:', error);
+      toast.error('Erro ao carregar equipes');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeletar = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este torneio?')) {
+    if (window.confirm('Tem certeza que deseja excluir esta equipe?')) {
       try {
-        await deleteDoc(doc(db, 'torneios', id));
-        toast.success('Torneio excluído com sucesso!');
-        carregarTorneios();
+        await deleteDoc(doc(db, 'equipes', id));
+        toast.success('Equipe excluída com sucesso!');
+        carregarEquipes();
       } catch (error) {
-        console.error('Erro ao excluir torneio:', error);
-        toast.error('Erro ao excluir torneio');
+        console.error('Erro ao excluir equipe:', error);
+        toast.error('Erro ao excluir equipe');
       }
     }
   };
@@ -61,7 +66,7 @@ export default function ListaTorneios() {
     return (
       <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500">Carregando torneios...</p>
+          <p className="text-gray-500">Carregando equipes...</p>
         </div>
       </div>
     );
@@ -71,18 +76,18 @@ export default function ListaTorneios() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Lista de Torneios</h1>
+          <h1 className="text-2xl font-bold">Lista de Equipes</h1>
           <button
-            onClick={() => router.push('/dashboard/cadastrar-torneio')}
+            onClick={() => router.push('/dashboard/cadastrar-equipe')}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
           >
-            Cadastrar Novo Torneio
+            Cadastrar Nova Equipe
           </button>
         </div>
 
-        {torneios.length === 0 ? (
+        {equipes.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">Nenhum torneio cadastrado.</p>
+            <p className="text-gray-500">Nenhuma equipe cadastrada.</p>
           </div>
         ) : (
           <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -91,16 +96,16 @@ export default function ListaTorneios() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nome do Torneio
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data de Realização
+                      Nome da Equipe
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Cidade/Estado
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Data Máxima Inscrição
+                      Responsável
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contato
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Data de Cadastro
@@ -111,42 +116,43 @@ export default function ListaTorneios() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {torneios.map((torneio) => (
-                    <tr key={torneio.id} className="hover:bg-gray-50">
+                  {equipes.map((equipe) => (
+                    <tr key={equipe.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {torneio.nomeTorneio}
+                          {equipe.nomeEquipe}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">
-                          {new Date(torneio.dataRealizacao).toLocaleDateString('pt-BR')}
+                          {equipe.cidade}/{equipe.estado}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">
-                          {torneio.cidade}/{torneio.estado}
+                          {equipe.responsavel}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">
-                          {new Date(torneio.dataMaximaInscricao).toLocaleDateString('pt-BR')}
+                          <div>{equipe.email}</div>
+                          <div>{equipe.telefone}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-500">
-                          {new Date(torneio.dataCadastro).toLocaleDateString('pt-BR')}
+                          {new Date(equipe.dataCadastro).toLocaleDateString('pt-BR')}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <button
-                          onClick={() => router.push(`/dashboard/editar-torneio/${torneio.id}`)}
+                          onClick={() => router.push(`/dashboard/editar-equipe/${equipe.id}`)}
                           className="text-blue-600 hover:text-blue-900 mr-4"
                         >
                           Editar
                         </button>
                         <button
-                          onClick={() => handleDeletar(torneio.id)}
+                          onClick={() => handleDeletar(equipe.id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           Excluir
@@ -162,4 +168,4 @@ export default function ListaTorneios() {
       </div>
     </div>
   );
-}
+} 
