@@ -10,7 +10,6 @@ import toast from 'react-hot-toast';
 interface FormData {
   nomeModalidade: string;
   codigoModalidade: string;
-  sexo: 'F' | 'M';
   status: 'ATIVO' | 'INATIVO';
 }
 
@@ -64,21 +63,6 @@ export default function CadastrarModalidade() {
             />
             {errors.codigoModalidade && (
               <span className="text-red-500 text-sm">{errors.codigoModalidade.message}</span>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Sexo</label>
-            <select
-              {...register('sexo', { required: 'Sexo é obrigatório' })}
-              className="w-full p-2 border rounded-md"
-            >
-              <option value="">Selecione o sexo</option>
-              <option value="F">Feminino</option>
-              <option value="M">Masculino</option>
-            </select>
-            {errors.sexo && (
-              <span className="text-red-500 text-sm">{errors.sexo.message}</span>
             )}
           </div>
 
