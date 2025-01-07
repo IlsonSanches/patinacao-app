@@ -12,6 +12,8 @@ interface Patinador {
   dataNascimento: string;
   equipe: string;
   dataCadastro: string;
+  docIdentificacaoUrl: string;
+  atestadoMedicoUrl: string;
 }
 
 interface Equipe {
@@ -120,7 +122,7 @@ export default function Patinadores() {
                     Equipe
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Data de Cadastro
+                    Documentos
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações
@@ -147,8 +149,27 @@ export default function Patinadores() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {new Date(patinador.dataCadastro).toLocaleDateString('pt-BR')}
+                      <div className="flex space-x-2">
+                        {patinador.docIdentificacaoUrl && (
+                          <a
+                            href={patinador.docIdentificacaoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Identificação
+                          </a>
+                        )}
+                        {patinador.atestadoMedicoUrl && (
+                          <a
+                            href={patinador.atestadoMedicoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Atestado
+                          </a>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
