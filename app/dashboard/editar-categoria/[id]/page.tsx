@@ -2,49 +2,74 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { db } from '@/app/firebase';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { doc, getDoc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-
-interface CategoriaData {
-  categoria: string;
-  codigoCategoria: string;
-  modalidade: string;
-  dataCadastro: string;
-  usuarioCadastro?: string;
-}
 
 interface Modalidade {
   id: string;
   nomeModalidade: string;
 }
 
-export default function CadastrarCategoria() {
+interface DadosAtualizacao {
+  categoria: string;
+  codigoCategoria: string;
+  modalidade: string;
+  dataAtualizacao: string;
+  usuarioAtualizacao?: string;
+}
+
+export default function EditarCategoria() {
+  const params = useParams();
+  const categoriaId = params?.id as string;
   const [categoria, setCategoria] = useState('');
   const [codigoCategoria, setCodigoCategoria] = useState('');
   const [modalidade, setModalidade] = useState('');
   const [modalidades, setModalidades] = useState<Modalidade[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [codigoOriginal, setCodigoOriginal] = useState('');
   const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    const carregarModalidades = async () => {
+    const carregarDados = async () => {
+      if (!categoriaId) {
+        toast.error('ID da categoria não encontrado');
+        router.push('/dashboard/categorias');
+        return;
+      }
+
       try {
-        const querySnapshot = await getDocs(collection(db, 'modalidades'));
-        const modalidadesData = querySnapshot.docs.map(doc => ({
+        // Carregar modalidades
+        const modalidadesSnapshot = await getDocs(collection(db, 'modalidades'));
+        const modalidadesData = modalidadesSnapshot.docs.map(doc => ({
           id: doc.id,
           nomeModalidade: doc.data().nomeModalidade
         }));
         setModalidades(modalidadesData);
+
+        // Carregar dados da categoria
+        const categoriaDoc = await getDoc(doc(db, 'categorias', categoriaId));
+        if (categoriaDoc.exists()) {
+          const data = categoriaDoc.data();
+          setCategoria(data.categoria);
+          setCodigoCategoria(data.codigoCategoria);
+          setCodigoOriginal(data.codigoCategoria);
+          setModalidade(data.modalidade);
+        } else {
+          toast.error('Categoria não encontrada');
+          router.push('/dashboard/categorias');
+        }
       } catch (error) {
-        console.error('Erro ao carregar modalidades:', error);
-        toast.error('Erro ao carregar modalidades');
+        console.error('Erro ao carregar dados:', error);
+        toast.error('Erro ao carregar dados');
+      } finally {
+        setLoading(false);
       }
     };
 
-    carregarModalidades();
-  }, []);
+    carregarDados();
+  }, [categoriaId, router]);
 
   // Formatar código da categoria
   const handleCodigoCategoria = (value: string) => {
@@ -57,6 +82,11 @@ export default function CadastrarCategoria() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!categoriaId) {
+      toast.error('ID da categoria não encontrado');
+      return;
+    }
+
     if (codigoCategoria.length === 0) {
       toast.error('O código da categoria é obrigatório');
       return;
@@ -75,50 +105,53 @@ export default function CadastrarCategoria() {
     setLoading(true);
 
     try {
-      // Verificar se já existe uma categoria com o mesmo código
-      const categoriaQuery = query(
-        collection(db, 'categorias'),
-        where('codigoCategoria', '==', codigoCategoria)
-      );
-      const categoriaSnapshot = await getDocs(categoriaQuery);
+      // Verificar se já existe uma categoria com o mesmo código (exceto a atual)
+      if (codigoCategoria !== codigoOriginal) {
+        const categoriaQuery = query(
+          collection(db, 'categorias'),
+          where('codigoCategoria', '==', codigoCategoria)
+        );
+        const categoriaSnapshot = await getDocs(categoriaQuery);
 
-      if (!categoriaSnapshot.empty) {
-        toast.error('Já existe uma categoria com este código');
-        setLoading(false);
-        return;
+        if (!categoriaSnapshot.empty) {
+          toast.error('Já existe uma categoria com este código');
+          setLoading(false);
+          return;
+        }
       }
 
-      // Preparar dados da categoria
-      const categoriaData: CategoriaData = {
+      // Atualizar categoria
+      await updateDoc(doc(db, 'categorias', categoriaId), {
         categoria,
         codigoCategoria,
         modalidade,
-        dataCadastro: new Date().toISOString(),
-      };
+        dataAtualizacao: new Date().toISOString(),
+        ...(user?.email ? { usuarioAtualizacao: user.email } : {})
+      });
 
-      // Adicionar email do usuário apenas se estiver disponível
-      if (user?.email) {
-        categoriaData.usuarioCadastro = user.email;
-      }
-
-      // Cadastrar nova categoria
-      await addDoc(collection(db, 'categorias'), categoriaData);
-
-      toast.success('Categoria cadastrada com sucesso!');
+      toast.success('Categoria atualizada com sucesso!');
       router.push('/dashboard/categorias');
     } catch (error) {
-      console.error('Erro ao cadastrar categoria:', error);
-      toast.error('Erro ao cadastrar categoria');
+      console.error('Erro ao atualizar categoria:', error);
+      toast.error('Erro ao atualizar categoria');
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto p-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">
-          Cadastrar Nova Categoria
+          Editar Categoria
         </h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6">
@@ -184,7 +217,7 @@ export default function CadastrarCategoria() {
                   ${loading ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
               >
-                {loading ? 'Cadastrando...' : 'Cadastrar Categoria'}
+                {loading ? 'Salvando...' : 'Salvar Alterações'}
               </button>
 
               <button
