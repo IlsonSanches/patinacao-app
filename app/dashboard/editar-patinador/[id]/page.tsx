@@ -2,42 +2,75 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { db } from '@/app/firebase';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { doc, getDoc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
+
+interface Patinador {
+  nome: string;
+  cpf: string;
+  dataNascimento: string;
+  equipe: string;
+}
 
 interface Equipe {
   id: string;
   nomeEquipe: string;
 }
 
-export default function CadastrarPatinador() {
+export default function EditarPatinador() {
+  const params = useParams();
+  const patinadorId = params?.id as string;
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
+  const [cpfOriginal, setCpfOriginal] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [equipe, setEquipe] = useState('');
   const [equipes, setEquipes] = useState<Equipe[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    const carregarEquipes = async () => {
+    const carregarDados = async () => {
+      if (!patinadorId) {
+        toast.error('ID do patinador não encontrado');
+        router.push('/dashboard/patinadores');
+        return;
+      }
+
       try {
-        const querySnapshot = await getDocs(collection(db, 'equipes'));
-        const equipesData = querySnapshot.docs.map(doc => ({
+        // Carregar equipes
+        const equipesSnapshot = await getDocs(collection(db, 'equipes'));
+        const equipesData = equipesSnapshot.docs.map(doc => ({
           id: doc.id,
           nomeEquipe: doc.data().nomeEquipe
         }));
         setEquipes(equipesData);
+
+        // Carregar dados do patinador
+        const patinadorDoc = await getDoc(doc(db, 'patinadores', patinadorId));
+        if (patinadorDoc.exists()) {
+          const data = patinadorDoc.data() as Patinador;
+          setNome(data.nome);
+          setCpf(data.cpf);
+          setCpfOriginal(data.cpf);
+          setDataNascimento(data.dataNascimento);
+          setEquipe(data.equipe || '');
+        } else {
+          toast.error('Patinador não encontrado');
+          router.push('/dashboard/patinadores');
+        }
       } catch (error) {
-        console.error('Erro ao carregar equipes:', error);
-        toast.error('Erro ao carregar equipes');
+        console.error('Erro ao carregar dados:', error);
+        toast.error('Erro ao carregar dados');
+      } finally {
+        setLoading(false);
       }
     };
 
-    carregarEquipes();
-  }, []);
+    carregarDados();
+  }, [patinadorId, router]);
 
   // Formatar CPF
   const handleCpf = (value: string) => {
@@ -54,6 +87,11 @@ export default function CadastrarPatinador() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!patinadorId) {
+      toast.error('ID do patinador não encontrado');
+      return;
+    }
+
     // Validar CPF
     const cpfLimpo = cpf.replace(/\D/g, '');
     if (cpfLimpo.length !== 11) {
@@ -64,44 +102,54 @@ export default function CadastrarPatinador() {
     setLoading(true);
 
     try {
-      // Verificar se já existe um patinador com o mesmo CPF
-      const patinadorQuery = query(
-        collection(db, 'patinadores'),
-        where('cpf', '==', cpf)
-      );
-      const patinadorSnapshot = await getDocs(patinadorQuery);
+      // Verificar se já existe um patinador com o mesmo CPF (exceto o atual)
+      if (cpf !== cpfOriginal) {
+        const patinadorQuery = query(
+          collection(db, 'patinadores'),
+          where('cpf', '==', cpf)
+        );
+        const patinadorSnapshot = await getDocs(patinadorQuery);
 
-      if (!patinadorSnapshot.empty) {
-        toast.error('Já existe um patinador com este CPF');
-        setLoading(false);
-        return;
+        if (!patinadorSnapshot.empty) {
+          toast.error('Já existe um patinador com este CPF');
+          setLoading(false);
+          return;
+        }
       }
 
-      // Cadastrar novo patinador
-      await addDoc(collection(db, 'patinadores'), {
+      // Atualizar patinador
+      await updateDoc(doc(db, 'patinadores', patinadorId), {
         nome,
         cpf,
         dataNascimento,
         equipe,
-        dataCadastro: new Date().toISOString(),
-        usuarioCadastro: user?.email
+        dataAtualizacao: new Date().toISOString(),
+        ...(user?.email ? { usuarioAtualizacao: user.email } : {})
       });
 
-      toast.success('Patinador cadastrado com sucesso!');
+      toast.success('Patinador atualizado com sucesso!');
       router.push('/dashboard/patinadores');
     } catch (error) {
-      console.error('Erro ao cadastrar patinador:', error);
-      toast.error('Erro ao cadastrar patinador');
+      console.error('Erro ao atualizar patinador:', error);
+      toast.error('Erro ao atualizar patinador');
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto p-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">
-          Cadastrar Novo Patinador
+          Editar Patinador
         </h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6">
@@ -177,7 +225,7 @@ export default function CadastrarPatinador() {
                   ${loading ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
               >
-                {loading ? 'Cadastrando...' : 'Cadastrar Patinador'}
+                {loading ? 'Salvando...' : 'Salvar Alterações'}
               </button>
 
               <button
