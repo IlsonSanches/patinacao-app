@@ -17,7 +17,14 @@ import {
   FaLayerGroup,
   FaChild,
   FaTrophy,
-  FaClipboardList
+  FaClipboardList,
+  FaClipboardCheck,
+  FaUserTie,
+  FaBuilding,
+  FaList,
+  FaCalendarAlt,
+  FaRegListAlt,
+  FaRegIdCard
 } from 'react-icons/fa';
 
 interface MenuItem {
@@ -70,6 +77,11 @@ export default function DashboardLayout({
       text: 'Exercícios Obrigatórios',
       href: '/dashboard/obrigatorios',
       icon: FaClipboardList
+    },
+    {
+      text: 'Inscrições',
+      href: '/dashboard/inscricoes',
+      icon: FaClipboardCheck
     },
     {
       text: 'Torneios',
