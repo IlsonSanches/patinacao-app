@@ -19,7 +19,7 @@ interface Patinador {
 
 interface Modalidade {
   id: string;
-  nome: string;
+  nomeModalidade: string;
 }
 
 interface Categoria {
@@ -56,6 +56,31 @@ export default function CadastrarInscricao() {
   useEffect(() => {
     const carregarDados = async () => {
       try {
+        console.log('Iniciando carregamento das modalidades...');
+        
+        // Carregar modalidades
+        const modalidadesRef = collection(db, 'modalidades');
+        const modalidadesSnapshot = await getDocs(modalidadesRef);
+        
+        console.log('Total de modalidades encontradas:', modalidadesSnapshot.size);
+        
+        const modalidadesData = modalidadesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Dados da modalidade:', { id: doc.id, ...data });
+          return {
+            id: doc.id,
+            nomeModalidade: data.nomeModalidade || ''
+          };
+        });
+
+        console.log('Modalidades processadas:', modalidadesData);
+        
+        if (modalidadesData.length > 0) {
+          setModalidades(modalidadesData);
+        } else {
+          console.log('Nenhuma modalidade encontrada');
+        }
+
         // Carregar equipes
         const equipesSnapshot = await getDocs(collection(db, 'equipes'));
         const equipesData = equipesSnapshot.docs.map(doc => ({
@@ -71,14 +96,6 @@ export default function CadastrarInscricao() {
           ...doc.data()
         })) as Patinador[];
         setPatinadores(patinadoresData);
-
-        // Carregar modalidades
-        const modalidadesSnapshot = await getDocs(collection(db, 'modalidades'));
-        const modalidadesData = modalidadesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Modalidade[];
-        setModalidades(modalidadesData);
 
         // Carregar categorias
         const categoriasSnapshot = await getDocs(collection(db, 'categorias'));
@@ -106,6 +123,11 @@ export default function CadastrarInscricao() {
 
     carregarDados();
   }, []);
+
+  // Adicionar um useEffect para monitorar mudanças nas modalidades
+  useEffect(() => {
+    console.log('Estado atual das modalidades:', modalidades);
+  }, [modalidades]);
 
   // Filtrar patinadores por equipe
   const patinadoresFiltrados = patinadores.filter(
@@ -135,18 +157,22 @@ export default function CadastrarInscricao() {
       const categoria = categorias.find(c => c.id === categoriaId);
       const idade = idades.find(i => i.id === idadeId);
 
+      if (!modalidade) {
+        throw new Error('Modalidade não encontrada');
+      }
+
       // Cadastrar inscrição
       await addDoc(collection(db, 'inscricoes'), {
         equipeId,
-        equipeNome: equipe?.nomeEquipe,
+        equipeNome: equipe?.nomeEquipe || '',
         patinadorId,
-        patinadorNome: patinador?.nome,
+        patinadorNome: patinador?.nome || '',
         modalidadeId,
-        modalidadeNome: modalidade?.nome,
+        modalidadeNome: modalidade.nomeModalidade,
         categoriaId,
-        categoriaNome: categoria?.nome,
+        categoriaNome: categoria?.nome || '',
         idadeId,
-        idadeFaixa: idade?.faixaIdade,
+        idadeFaixa: idade?.faixaIdade || '',
         dataCadastro: new Date().toISOString(),
         usuarioCadastro: user?.email || 'sistema'
       });
@@ -221,11 +247,12 @@ export default function CadastrarInscricao() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Modalidade
+                Modalidade {modalidades.length > 0 ? `(${modalidades.length})` : '(Carregando...)'}
               </label>
               <select
                 value={modalidadeId}
                 onChange={(e) => {
+                  console.log('Modalidade selecionada:', e.target.value);
                   setModalidadeId(e.target.value);
                   setCategoriaId(''); // Resetar categoria ao mudar de modalidade
                 }}
@@ -235,7 +262,7 @@ export default function CadastrarInscricao() {
                 <option value="">Selecione uma modalidade</option>
                 {modalidades.map((modalidade) => (
                   <option key={modalidade.id} value={modalidade.id}>
-                    {modalidade.nome}
+                    {modalidade.nomeModalidade || 'Sem nome'}
                   </option>
                 ))}
               </select>
