@@ -2,28 +2,28 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { db } from '@/app/firebase';
-import { doc, getDoc, updateDoc, getDocs, query, collection, where } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 const FAIXAS_IDADE = [
-  'até 08 anos',
-  'até 09 anos',
-  'até 12 anos',
-  '09 a 10 anos',
-  '09 a 11 anos',
-  '11 a 12 anos',
-  '12 a 14 anos',
-  '13 a 15 anos',
-  '13 a 18 anos',
-  '15 anos ou mais',
-  '16 a 18 anos',
-  '19 a 29 anos',
-  '19 a 39 anos',
-  '30 anos ou +',
-  '40 anos ou +',
-  'PNE',
-  'PRD'
+  { codigo: 'BS1', faixa: 'até 08 anos' },
+  { codigo: 'BS2', faixa: 'até 09 anos' },
+  { codigo: 'BS3', faixa: 'até 12 anos' },
+  { codigo: 'IN1', faixa: '09 a 10 anos' },
+  { codigo: 'IN2', faixa: '09 a 11 anos' },
+  { codigo: 'IN3', faixa: '11 a 12 anos' },
+  { codigo: 'CA1', faixa: '12 a 14 anos' },
+  { codigo: 'CA2', faixa: '13 a 15 anos' },
+  { codigo: 'CA3', faixa: '13 a 18 anos' },
+  { codigo: 'JV1', faixa: '15 anos ou mais' },
+  { codigo: 'JV2', faixa: '16 a 18 anos' },
+  { codigo: 'SR1', faixa: '19 a 29 anos' },
+  { codigo: 'SR2', faixa: '19 a 39 anos' },
+  { codigo: 'SR3', faixa: '30 anos ou +' },
+  { codigo: 'SR4', faixa: '40 anos ou +' },
+  { codigo: 'PNE', faixa: 'PNE' },
+  { codigo: 'PRD', faixa: 'PRD' }
 ] as const;
 
 interface PageProps {
@@ -33,9 +33,7 @@ interface PageProps {
 }
 
 export default function EditarIdade({ params }: PageProps) {
-  const [codigo, setCodigo] = useState('');
-  const [faixaIdade, setFaixaIdade] = useState('');
-  const [codigoOriginal, setCodigoOriginal] = useState('');
+  const [selectedFaixa, setSelectedFaixa] = useState('');
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const router = useRouter();
@@ -46,9 +44,13 @@ export default function EditarIdade({ params }: PageProps) {
         const idadeDoc = await getDoc(doc(db, 'idades', params.id));
         if (idadeDoc.exists()) {
           const data = idadeDoc.data();
-          setCodigo(data.codigo);
-          setCodigoOriginal(data.codigo);
-          setFaixaIdade(data.faixaIdade);
+          // Encontrar a faixa correspondente pelo código
+          const faixaEncontrada = FAIXAS_IDADE.find(f => f.codigo === data.codigo);
+          if (faixaEncontrada) {
+            setSelectedFaixa(faixaEncontrada.codigo);
+          } else {
+            toast.error('Faixa de idade não encontrada na lista');
+          }
         } else {
           toast.error('Faixa de idade não encontrada');
           router.push('/dashboard/idades');
@@ -64,23 +66,10 @@ export default function EditarIdade({ params }: PageProps) {
     carregarIdade();
   }, [params.id, router]);
 
-  // Formatar código (3 caracteres)
-  const handleCodigo = (value: string) => {
-    const formatted = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (formatted.length <= 3) {
-      setCodigo(formatted);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (codigo.length !== 3) {
-      toast.error('O código deve ter exatamente 3 caracteres');
-      return;
-    }
-
-    if (!faixaIdade) {
+    if (!selectedFaixa) {
       toast.error('Selecione uma faixa de idade');
       return;
     }
@@ -88,25 +77,16 @@ export default function EditarIdade({ params }: PageProps) {
     setLoading(true);
 
     try {
-      // Verificar se já existe uma idade com o mesmo código (exceto a atual)
-      if (codigo !== codigoOriginal) {
-        const idadeQuery = query(
-          collection(db, 'idades'),
-          where('codigo', '==', codigo)
-        );
-        const idadeSnapshot = await getDocs(idadeQuery);
-
-        if (!idadeSnapshot.empty) {
-          toast.error('Já existe uma faixa de idade com este código');
-          setLoading(false);
-          return;
-        }
+      const faixaSelecionada = FAIXAS_IDADE.find(f => f.codigo === selectedFaixa);
+      if (!faixaSelecionada) {
+        throw new Error('Faixa de idade não encontrada');
       }
 
       // Atualizar idade
       await updateDoc(doc(db, 'idades', params.id), {
-        codigo,
-        faixaIdade,
+        codigo: faixaSelecionada.codigo,
+        faixaIdade: faixaSelecionada.faixa,
+        descricaoCompleta: `${faixaSelecionada.codigo} - ${faixaSelecionada.faixa}`,
         dataAtualizacao: new Date().toISOString(),
         usuarioAtualizacao: user?.email || 'sistema'
       });
@@ -116,7 +96,6 @@ export default function EditarIdade({ params }: PageProps) {
     } catch (error) {
       console.error('Erro ao atualizar faixa de idade:', error);
       toast.error('Erro ao atualizar faixa de idade');
-    } finally {
       setLoading(false);
     }
   };
@@ -140,36 +119,18 @@ export default function EditarIdade({ params }: PageProps) {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Código (3 caracteres)
-              </label>
-              <input
-                type="text"
-                value={codigo}
-                onChange={(e) => handleCodigo(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
-                placeholder="ABC"
-                maxLength={3}
-                required
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Use letras e números (exatamente 3 caracteres)
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Faixa de Idade
               </label>
               <select
-                value={faixaIdade}
-                onChange={(e) => setFaixaIdade(e.target.value)}
+                value={selectedFaixa}
+                onChange={(e) => setSelectedFaixa(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               >
                 <option value="">Selecione uma faixa de idade</option>
                 {FAIXAS_IDADE.map((faixa) => (
-                  <option key={faixa} value={faixa}>
-                    {faixa}
+                  <option key={faixa.codigo} value={faixa.codigo}>
+                    {`${faixa.codigo} - ${faixa.faixa}`}
                   </option>
                 ))}
               </select>

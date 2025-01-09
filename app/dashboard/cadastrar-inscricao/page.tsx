@@ -24,7 +24,7 @@ interface Modalidade {
 
 interface Categoria {
   id: string;
-  nome: string;
+  nomeCategoria: string;
   modalidade: string;
 }
 
@@ -32,6 +32,7 @@ interface Idade {
   id: string;
   codigo: string;
   faixaIdade: string;
+  descricaoCompleta?: string;
 }
 
 export default function CadastrarInscricao() {
@@ -98,11 +99,21 @@ export default function CadastrarInscricao() {
         setPatinadores(patinadoresData);
 
         // Carregar categorias
+        console.log('Iniciando carregamento das categorias...');
         const categoriasSnapshot = await getDocs(collection(db, 'categorias'));
-        const categoriasData = categoriasSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Categoria[];
+        console.log('Total de categorias encontradas:', categoriasSnapshot.size);
+        
+        const categoriasData = categoriasSnapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Dados da categoria:', { id: doc.id, ...data });
+          return {
+            id: doc.id,
+            nomeCategoria: data.categoria || 'Categoria sem nome',
+            modalidade: data.modalidade || ''
+          };
+        });
+
+        console.log('Categorias processadas:', categoriasData);
         setCategorias(categoriasData);
 
         // Carregar idades
@@ -129,15 +140,26 @@ export default function CadastrarInscricao() {
     console.log('Estado atual das modalidades:', modalidades);
   }, [modalidades]);
 
+  // Adicionar um useEffect para monitorar mudanças nas categorias
+  useEffect(() => {
+    console.log('Estado atual das categorias:', categorias);
+  }, [categorias]);
+
   // Filtrar patinadores por equipe
   const patinadoresFiltrados = patinadores.filter(
     patinador => !equipeId || patinador.equipe === equipeId
   );
 
-  // Filtrar categorias por modalidade
-  const categoriasFiltradas = categorias.filter(
-    categoria => !modalidadeId || categoria.modalidade === modalidadeId
-  );
+  // Filtrar categorias por modalidade com log
+  const categoriasFiltradas = categorias.filter(categoria => {
+    const filtrada = !modalidadeId || categoria.modalidade === modalidadeId;
+    console.log('Filtrando categoria:', {
+      categoria,
+      modalidadeId,
+      incluida: filtrada
+    });
+    return filtrada;
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,7 +192,7 @@ export default function CadastrarInscricao() {
         modalidadeId,
         modalidadeNome: modalidade.nomeModalidade,
         categoriaId,
-        categoriaNome: categoria?.nome || '',
+        categoriaNome: categoria?.nomeCategoria || '',
         idadeId,
         idadeFaixa: idade?.faixaIdade || '',
         dataCadastro: new Date().toISOString(),
@@ -270,20 +292,28 @@ export default function CadastrarInscricao() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Categoria
+                Categoria {categorias.length > 0 ? `(${categoriasFiltradas.length} disponíveis)` : '(Carregando...)'}
               </label>
               <select
                 value={categoriaId}
-                onChange={(e) => setCategoriaId(e.target.value)}
+                onChange={(e) => {
+                  console.log('Categoria selecionada:', e.target.value);
+                  const categoriaSelecionada = categorias.find(c => c.id === e.target.value);
+                  console.log('Dados da categoria selecionada:', categoriaSelecionada);
+                  setCategoriaId(e.target.value);
+                }}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               >
                 <option value="">Selecione uma categoria</option>
-                {categoriasFiltradas.map((categoria) => (
-                  <option key={categoria.id} value={categoria.id}>
-                    {categoria.nome}
-                  </option>
-                ))}
+                {categoriasFiltradas.map((categoria) => {
+                  console.log('Renderizando opção de categoria:', categoria);
+                  return (
+                    <option key={categoria.id} value={categoria.id}>
+                      {categoria.nomeCategoria}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -300,7 +330,7 @@ export default function CadastrarInscricao() {
                 <option value="">Selecione uma faixa de idade</option>
                 {idades.map((idade) => (
                   <option key={idade.id} value={idade.id}>
-                    {idade.faixaIdade}
+                    {idade.descricaoCompleta || `${idade.codigo} - ${idade.faixaIdade}`}
                   </option>
                 ))}
               </select>

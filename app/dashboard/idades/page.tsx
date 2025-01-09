@@ -9,6 +9,7 @@ interface Idade {
   id: string;
   codigo: string;
   faixaIdade: string;
+  descricaoCompleta: string;
 }
 
 export default function Idades() {
@@ -85,9 +86,6 @@ export default function Idades() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Código
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Faixa de Idade
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -99,10 +97,9 @@ export default function Idades() {
                 {idades.map((idade) => (
                   <tr key={idade.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{idade.codigo}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{idade.faixaIdade}</div>
+                      <div className="text-sm text-gray-900">
+                        {idade.descricaoCompleta || `${idade.codigo} - ${idade.faixaIdade}`}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
