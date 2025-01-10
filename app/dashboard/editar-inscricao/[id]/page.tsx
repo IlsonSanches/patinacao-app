@@ -57,7 +57,6 @@ export default function EditarInscricao({ params }: PageProps) {
   const [patinadorId, setPatinadorId] = useState('');
   const [modalidadeId, setModalidadeId] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
-  const [idadeId, setIdadeId] = useState('');
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -116,14 +115,6 @@ export default function EditarInscricao({ params }: PageProps) {
         console.log('Categorias carregadas:', categoriasData);
         setCategorias(categoriasData);
 
-        // Carregar idades
-        const idadesSnapshot = await getDocs(collection(db, 'idades'));
-        const idadesData = idadesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Idade[];
-        setIdades(idadesData);
-
         // Carregar inscrição atual
         const inscricaoDoc = await getDoc(doc(db, 'inscricoes', params.id));
         if (inscricaoDoc.exists()) {
@@ -133,7 +124,6 @@ export default function EditarInscricao({ params }: PageProps) {
           setPatinadorId(data.patinadorId || '');
           setModalidadeId(data.modalidadeId || '');
           setCategoriaId(data.categoriaId || '');
-          setIdadeId(data.idadeId || '');
         } else {
           toast.error('Inscrição não encontrada');
           router.push('/dashboard/inscricoes');
@@ -168,7 +158,7 @@ export default function EditarInscricao({ params }: PageProps) {
       return;
     }
 
-    if (!equipeId || !patinadorId || !modalidadeId || !categoriaId || !idadeId) {
+    if (!equipeId || !patinadorId || !modalidadeId || !categoriaId) {
       toast.error('Todos os campos são obrigatórios');
       return;
     }
@@ -181,9 +171,8 @@ export default function EditarInscricao({ params }: PageProps) {
       const patinador = patinadores.find(p => p.id === patinadorId);
       const modalidade = modalidades.find(m => m.id === modalidadeId);
       const categoria = categorias.find(c => c.id === categoriaId);
-      const idade = idades.find(i => i.id === idadeId);
 
-      if (!modalidade || !categoria || !equipe || !patinador || !idade) {
+      if (!modalidade || !categoria || !equipe || !patinador) {
         throw new Error('Dados necessários não encontrados');
       }
 
@@ -199,8 +188,8 @@ export default function EditarInscricao({ params }: PageProps) {
         modalidadeNome: modalidade.nomeModalidade,
         categoriaId,
         categoriaNome: categoria.categoria,
-        idadeId,
-        idadeFaixa: idade.faixaIdade,
+        idadeId: '',
+        idadeFaixa: '',
         dataAtualizacao: new Date().toISOString(),
         usuarioAtualizacao: user?.email || 'sistema'
       });
@@ -317,25 +306,6 @@ export default function EditarInscricao({ params }: PageProps) {
                 {categoriasFiltradas.map((categoria) => (
                   <option key={categoria.id} value={categoria.id}>
                     {categoria.categoria}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Faixa de Idade
-              </label>
-              <select
-                value={idadeId}
-                onChange={(e) => setIdadeId(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              >
-                <option value="">Selecione uma faixa de idade</option>
-                {idades.map((idade) => (
-                  <option key={idade.id} value={idade.id}>
-                    {idade.descricaoCompleta || `${idade.codigo} - ${idade.faixaIdade}`}
                   </option>
                 ))}
               </select>

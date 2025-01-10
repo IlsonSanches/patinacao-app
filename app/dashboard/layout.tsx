@@ -15,7 +15,6 @@ import {
   FaUsers,
   FaMedal,
   FaLayerGroup,
-  FaChild,
   FaTrophy,
   FaClipboardList,
   FaClipboardCheck,
@@ -69,9 +68,9 @@ export default function DashboardLayout({
       icon: FaLayerGroup
     },
     {
-      text: 'Faixas de Idade',
+      text: 'Idades',
       href: '/dashboard/idades',
-      icon: FaChild
+      icon: FaCalendarAlt
     },
     {
       text: 'Exercícios Obrigatórios',

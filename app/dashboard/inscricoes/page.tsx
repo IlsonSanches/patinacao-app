@@ -12,7 +12,6 @@ interface Inscricao {
   patinadorNome: string;
   modalidadeNome: string;
   categoriaNome: string;
-  idadeFaixa: string;
   dataCadastro: string;
 }
 
@@ -103,9 +102,6 @@ export default function ListaInscricoes() {
                   Categoria
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Faixa de Idade
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Data de Cadastro
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -127,9 +123,6 @@ export default function ListaInscricoes() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {inscricao.categoriaNome}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {inscricao.idadeFaixa}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(inscricao.dataCadastro).toLocaleDateString('pt-BR')}

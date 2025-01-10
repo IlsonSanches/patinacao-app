@@ -3,53 +3,61 @@ import { useState, useEffect } from 'react';
 import { db } from '@/app/firebase';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 interface Idade {
   id: string;
-  codigo: string;
-  faixaIdade: string;
-  descricaoCompleta: string;
+  codIdade: string;
+  categoriaId: string;
+  categoriaNome: string;
 }
 
-export default function Idades() {
+export default function ListaIdades() {
   const [idades, setIdades] = useState<Idade[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
+    const carregarIdades = async () => {
+      try {
+        const idadesSnapshot = await getDocs(collection(db, 'idades'));
+        const idadesData = idadesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Idade[];
+
+        // Ordenar por código da idade com verificação de segurança
+        idadesData.sort((a, b) => {
+          const codA = a.codIdade || '';
+          const codB = b.codIdade || '';
+          return codA.localeCompare(codB);
+        });
+
+        setIdades(idadesData);
+      } catch (error) {
+        console.error('Erro ao carregar idades:', error);
+        toast.error('Erro ao carregar idades');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     carregarIdades();
   }, []);
 
-  const carregarIdades = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, 'idades'));
-      const idadesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Idade[];
-      
-      // Ordenar por código
-      idadesData.sort((a, b) => a.codigo.localeCompare(b.codigo));
-      setIdades(idadesData);
-    } catch (error) {
-      console.error('Erro ao carregar faixas de idade:', error);
-      toast.error('Erro ao carregar faixas de idade');
-    } finally {
-      setLoading(false);
+  const handleExcluir = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta idade?')) {
+      return;
     }
-  };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta faixa de idade?')) {
-      try {
-        await deleteDoc(doc(db, 'idades', id));
-        toast.success('Faixa de idade excluída com sucesso!');
-        carregarIdades();
-      } catch (error) {
-        console.error('Erro ao excluir faixa de idade:', error);
-        toast.error('Erro ao excluir faixa de idade');
-      }
+    try {
+      await deleteDoc(doc(db, 'idades', id));
+      setIdades(idades.filter(idade => idade.id !== id));
+      toast.success('Idade excluída com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir idade:', error);
+      toast.error('Erro ao excluir idade');
     }
   };
 
@@ -62,65 +70,66 @@ export default function Idades() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">
-            Faixas de Idade
+            Idades
           </h1>
+
           <button
             onClick={() => router.push('/dashboard/cadastrar-idade')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            Nova Faixa de Idade
+            Nova Idade
           </button>
         </div>
 
-        {idades.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-6 text-center text-gray-500">
-            Nenhuma faixa de idade cadastrada
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Faixa de Idade
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {idades.map((idade) => (
-                  <tr key={idade.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {idade.descricaoCompleta || `${idade.codigo} - ${idade.faixaIdade}`}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Código/Idade
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Categoria
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {idades.map((idade) => (
+                <tr key={idade.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {idade.codIdade}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {idade.categoriaNome}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div className="flex items-center gap-3">
                       <button
                         onClick={() => router.push(`/dashboard/editar-idade/${idade.id}`)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
+                        className="text-blue-600 hover:text-blue-800"
                       >
-                        Editar
+                        <FaEdit size={18} />
                       </button>
                       <button
-                        onClick={() => handleDelete(idade.id)}
-                        className="text-red-600 hover:text-red-900"
+                        onClick={() => handleExcluir(idade.id)}
+                        className="text-red-600 hover:text-red-800"
                       >
-                        Excluir
+                        <FaTrash size={18} />
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
