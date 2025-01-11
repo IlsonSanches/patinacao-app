@@ -12,8 +12,6 @@ interface Patinador {
   dataNascimento: string;
   equipe: string;
   dataCadastro: string;
-  docIdentificacaoUrl: string;
-  atestadoMedicoUrl: string;
 }
 
 interface Equipe {
@@ -26,6 +24,20 @@ export default function Patinadores() {
   const [equipes, setEquipes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  const calcularIdade = (dataNascimento: string): number => {
+    const hoje = new Date();
+    const nascimento = new Date(dataNascimento);
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const mesAtual = hoje.getMonth();
+    const mesNascimento = nascimento.getMonth();
+    
+    if (mesAtual < mesNascimento || (mesAtual === mesNascimento && hoje.getDate() < nascimento.getDate())) {
+      idade--;
+    }
+    
+    return idade;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -119,10 +131,10 @@ export default function Patinadores() {
                     Data de Nascimento
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Equipe
+                    Idade
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Documentos
+                    Equipe
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações
@@ -145,31 +157,12 @@ export default function Patinadores() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {equipes[patinador.equipe] || 'Não definida'}
+                        {calcularIdade(patinador.dataNascimento)} anos
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex space-x-2">
-                        {patinador.docIdentificacaoUrl && (
-                          <a
-                            href={patinador.docIdentificacaoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            Identificação
-                          </a>
-                        )}
-                        {patinador.atestadoMedicoUrl && (
-                          <a
-                            href={patinador.atestadoMedicoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            Atestado
-                          </a>
-                        )}
+                      <div className="text-sm text-gray-900">
+                        {equipes[patinador.equipe] || 'Não definida'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

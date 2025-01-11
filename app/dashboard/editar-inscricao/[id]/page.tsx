@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { db } from '@/app/firebase';
 import { doc, getDoc, updateDoc, getDocs, collection } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 interface PageProps {
@@ -36,13 +36,28 @@ interface Categoria {
 
 interface Idade {
   id: string;
-  codigo: string;
-  faixaIdade: string;
-  descricaoCompleta?: string;
+  codIdade: string;
+  categoria: string;
 }
 
-export default function EditarInscricao({ params }: PageProps) {
+interface Inscricao {
+  id: string;
+  equipeId: string;
+  equipeNome: string;
+  patinadorId: string;
+  patinadorNome: string;
+  modalidadeId: string;
+  modalidadeNome: string;
+  categoriaId: string;
+  categoriaNome: string;
+  idadeId: string;
+  idadeCodigo: string;
+}
+
+export default function EditarInscricao() {
   const router = useRouter();
+  const params = useParams();
+  const inscricaoId = params?.id as string;
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [loadingDados, setLoadingDados] = useState(true);
@@ -57,11 +72,12 @@ export default function EditarInscricao({ params }: PageProps) {
   const [patinadorId, setPatinadorId] = useState('');
   const [modalidadeId, setModalidadeId] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
+  const [idadeId, setIdadeId] = useState('');
 
   // Carregar dados iniciais
   useEffect(() => {
     const carregarDados = async () => {
-      if (!params?.id) {
+      if (!inscricaoId) {
         toast.error('ID da inscrição não encontrado');
         router.push('/dashboard/inscricoes');
         return;
@@ -76,6 +92,7 @@ export default function EditarInscricao({ params }: PageProps) {
           id: doc.id,
           ...doc.data()
         })) as Equipe[];
+        console.log('Equipes carregadas:', equipesData);
         setEquipes(equipesData);
 
         // Carregar patinadores
@@ -84,46 +101,48 @@ export default function EditarInscricao({ params }: PageProps) {
           id: doc.id,
           ...doc.data()
         })) as Patinador[];
+        console.log('Patinadores carregados:', patinadoresData);
         setPatinadores(patinadoresData);
 
         // Carregar modalidades
-        console.log('Carregando modalidades...');
         const modalidadesSnapshot = await getDocs(collection(db, 'modalidades'));
-        const modalidadesData = modalidadesSnapshot.docs.map(doc => {
-          const data = doc.data();
-          console.log('Dados da modalidade:', { id: doc.id, ...data });
-          return {
-            id: doc.id,
-            nomeModalidade: data.nomeModalidade || 'Modalidade sem nome'
-          };
-        });
+        const modalidadesData = modalidadesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          nomeModalidade: doc.data().nomeModalidade
+        }));
         console.log('Modalidades carregadas:', modalidadesData);
         setModalidades(modalidadesData);
 
         // Carregar categorias
-        console.log('Carregando categorias...');
         const categoriasSnapshot = await getDocs(collection(db, 'categorias'));
-        const categoriasData = categoriasSnapshot.docs.map(doc => {
-          const data = doc.data();
-          console.log('Dados da categoria:', { id: doc.id, ...data });
-          return {
-            id: doc.id,
-            categoria: data.categoria || 'Categoria sem nome',
-            modalidade: data.modalidade || ''
-          };
-        });
+        const categoriasData = categoriasSnapshot.docs.map(doc => ({
+          id: doc.id,
+          categoria: doc.data().categoria,
+          modalidade: doc.data().modalidade
+        }));
         console.log('Categorias carregadas:', categoriasData);
         setCategorias(categoriasData);
 
+        // Carregar idades
+        const idadesSnapshot = await getDocs(collection(db, 'idades'));
+        const idadesData = idadesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          codIdade: doc.data().codIdade,
+          categoria: doc.data().categoria
+        }));
+        console.log('Idades carregadas:', idadesData);
+        setIdades(idadesData);
+
         // Carregar inscrição atual
-        const inscricaoDoc = await getDoc(doc(db, 'inscricoes', params.id));
+        const inscricaoDoc = await getDoc(doc(db, 'inscricoes', inscricaoId));
         if (inscricaoDoc.exists()) {
-          const data = inscricaoDoc.data();
+          const data = inscricaoDoc.data() as Inscricao;
           console.log('Dados da inscrição:', data);
-          setEquipeId(data.equipeId || '');
-          setPatinadorId(data.patinadorId || '');
-          setModalidadeId(data.modalidadeId || '');
-          setCategoriaId(data.categoriaId || '');
+          setEquipeId(data.equipeId);
+          setPatinadorId(data.patinadorId);
+          setModalidadeId(data.modalidadeId);
+          setCategoriaId(data.categoriaId);
+          setIdadeId(data.idadeId);
         } else {
           toast.error('Inscrição não encontrada');
           router.push('/dashboard/inscricoes');
@@ -131,34 +150,54 @@ export default function EditarInscricao({ params }: PageProps) {
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
         toast.error('Erro ao carregar dados');
-        router.push('/dashboard/inscricoes');
       } finally {
         setLoadingDados(false);
       }
     };
 
     carregarDados();
-  }, [params?.id, router]);
+  }, [inscricaoId, router]);
 
   // Filtrar patinadores por equipe
-  const patinadoresFiltrados = patinadores.filter(
-    patinador => !equipeId || patinador.equipe === equipeId
+  const patinadoresFiltrados = patinadores.filter(patinador => 
+    !equipeId || patinador.equipe === equipeId
   );
 
   // Filtrar categorias por modalidade
-  const categoriasFiltradas = categorias.filter(
-    categoria => !modalidadeId || categoria.modalidade === modalidadeId
+  const categoriasFiltradas = categorias.filter(categoria => 
+    !modalidadeId || categoria.modalidade === modalidadeId
   );
+
+  // Filtrar idades por categoria
+  const idadesFiltradas = idades.filter(idade => 
+    !categoriaId || idade.categoria === categoriaId
+  );
+
+  // Debug dos filtros
+  useEffect(() => {
+    console.log('Estado atual:', {
+      equipeId,
+      patinadorId,
+      modalidadeId,
+      categoriaId,
+      idadeId
+    });
+    console.log('Dados filtrados:', {
+      patinadoresFiltrados,
+      categoriasFiltradas,
+      idadesFiltradas
+    });
+  }, [equipeId, patinadorId, modalidadeId, categoriaId, idadeId, patinadoresFiltrados, categoriasFiltradas, idadesFiltradas]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!params?.id) {
+    if (!inscricaoId) {
       toast.error('ID da inscrição não encontrado');
       return;
     }
 
-    if (!equipeId || !patinadorId || !modalidadeId || !categoriaId) {
+    if (!equipeId || !patinadorId || !modalidadeId || !categoriaId || !idadeId) {
       toast.error('Todos os campos são obrigatórios');
       return;
     }
@@ -171,15 +210,14 @@ export default function EditarInscricao({ params }: PageProps) {
       const patinador = patinadores.find(p => p.id === patinadorId);
       const modalidade = modalidades.find(m => m.id === modalidadeId);
       const categoria = categorias.find(c => c.id === categoriaId);
+      const idade = idades.find(i => i.id === idadeId);
 
-      if (!modalidade || !categoria || !equipe || !patinador) {
+      if (!modalidade || !categoria || !equipe || !patinador || !idade) {
         throw new Error('Dados necessários não encontrados');
       }
 
-      const inscricaoRef = doc(db, 'inscricoes', params.id);
-
       // Atualizar inscrição
-      await updateDoc(inscricaoRef, {
+      await updateDoc(doc(db, 'inscricoes', inscricaoId), {
         equipeId,
         equipeNome: equipe.nomeEquipe,
         patinadorId,
@@ -188,22 +226,18 @@ export default function EditarInscricao({ params }: PageProps) {
         modalidadeNome: modalidade.nomeModalidade,
         categoriaId,
         categoriaNome: categoria.categoria,
-        idadeId: '',
-        idadeFaixa: '',
+        idadeId,
+        idadeCodigo: idade.codIdade,
         dataAtualizacao: new Date().toISOString(),
         usuarioAtualizacao: user?.email || 'sistema'
       });
 
       toast.success('Inscrição atualizada com sucesso!');
-      
-      // Pequeno delay antes do redirecionamento para garantir que o toast seja exibido
-      setTimeout(() => {
-        setLoading(false);
-        router.push('/dashboard/inscricoes');
-      }, 1000);
+      router.push('/dashboard/inscricoes');
     } catch (error) {
       console.error('Erro ao atualizar inscrição:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao atualizar inscrição');
+    } finally {
       setLoading(false);
     }
   };
@@ -232,6 +266,7 @@ export default function EditarInscricao({ params }: PageProps) {
               <select
                 value={equipeId}
                 onChange={(e) => {
+                  console.log('Equipe selecionada:', e.target.value);
                   setEquipeId(e.target.value);
                   setPatinadorId(''); // Resetar patinador ao mudar de equipe
                 }}
@@ -253,7 +288,10 @@ export default function EditarInscricao({ params }: PageProps) {
               </label>
               <select
                 value={patinadorId}
-                onChange={(e) => setPatinadorId(e.target.value)}
+                onChange={(e) => {
+                  console.log('Patinador selecionado:', e.target.value);
+                  setPatinadorId(e.target.value);
+                }}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               >
@@ -276,6 +314,7 @@ export default function EditarInscricao({ params }: PageProps) {
                   console.log('Modalidade selecionada:', e.target.value);
                   setModalidadeId(e.target.value);
                   setCategoriaId(''); // Resetar categoria ao mudar de modalidade
+                  setIdadeId(''); // Resetar idade ao mudar de modalidade
                 }}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
@@ -298,6 +337,7 @@ export default function EditarInscricao({ params }: PageProps) {
                 onChange={(e) => {
                   console.log('Categoria selecionada:', e.target.value);
                   setCategoriaId(e.target.value);
+                  setIdadeId(''); // Resetar idade ao mudar de categoria
                 }}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
@@ -306,6 +346,28 @@ export default function EditarInscricao({ params }: PageProps) {
                 {categoriasFiltradas.map((categoria) => (
                   <option key={categoria.id} value={categoria.id}>
                     {categoria.categoria}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Idade
+              </label>
+              <select
+                value={idadeId}
+                onChange={(e) => {
+                  console.log('Idade selecionada:', e.target.value);
+                  setIdadeId(e.target.value);
+                }}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="">Selecione uma idade</option>
+                {idadesFiltradas.map((idade) => (
+                  <option key={idade.id} value={idade.id}>
+                    {idade.codIdade}
                   </option>
                 ))}
               </select>

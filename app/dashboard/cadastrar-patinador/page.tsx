@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
-import { db, storage } from '@/app/firebase';
+import { db } from '@/app/firebase';
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -17,8 +16,6 @@ export default function CadastrarPatinador() {
   const [cpf, setCpf] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
   const [equipe, setEquipe] = useState('');
-  const [docIdentificacao, setDocIdentificacao] = useState<File | null>(null);
-  const [atestadoMedico, setAtestadoMedico] = useState<File | null>(null);
   const [equipes, setEquipes] = useState<Equipe[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -54,37 +51,18 @@ export default function CadastrarPatinador() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'identificacao' | 'atestado') => {
-    const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      if (type === 'identificacao') {
-        setDocIdentificacao(file);
-      } else {
-        setAtestadoMedico(file);
-      }
-    } else {
-      toast.error('Por favor, selecione um arquivo PDF válido');
-    }
-  };
-
-  const uploadFile = async (file: File, path: string) => {
-    const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!nome || !cpf || !dataNascimento || !equipe) {
+      toast.error('Todos os campos são obrigatórios');
+      return;
+    }
+
     // Validar CPF
     const cpfLimpo = cpf.replace(/\D/g, '');
     if (cpfLimpo.length !== 11) {
       toast.error('CPF inválido');
-      return;
-    }
-
-    if (!docIdentificacao || !atestadoMedico) {
-      toast.error('Por favor, faça o upload de todos os documentos necessários');
       return;
     }
 
@@ -104,26 +82,14 @@ export default function CadastrarPatinador() {
         return;
       }
 
-      // Upload dos documentos
-      const docIdentificacaoUrl = await uploadFile(
-        docIdentificacao,
-        `documentos/${cpfLimpo}/identificacao.pdf`
-      );
-      const atestadoMedicoUrl = await uploadFile(
-        atestadoMedico,
-        `documentos/${cpfLimpo}/atestado.pdf`
-      );
-
       // Cadastrar novo patinador
       await addDoc(collection(db, 'patinadores'), {
         nome,
         cpf,
         dataNascimento,
         equipe,
-        docIdentificacaoUrl,
-        atestadoMedicoUrl,
         dataCadastro: new Date().toISOString(),
-        usuarioCadastro: user?.email
+        usuarioCadastro: user?.email || 'sistema'
       });
 
       toast.success('Patinador cadastrado com sucesso!');
@@ -158,7 +124,7 @@ export default function CadastrarPatinador() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Data de Nascimento
@@ -206,34 +172,6 @@ export default function CadastrarPatinador() {
               </select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Documento de Identificação (PDF)
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => handleFileChange(e, 'identificacao')}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Atestado Médico (PDF)
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => handleFileChange(e, 'atestado')}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-            </div>
-
             <div className="flex gap-4">
               <button
                 type="submit"
@@ -244,13 +182,17 @@ export default function CadastrarPatinador() {
                   ${loading ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
               >
-                {loading ? 'Cadastrando...' : 'Cadastrar Patinador'}
+                {loading ? 'Cadastrando...' : 'Cadastrar'}
               </button>
 
               <button
                 type="button"
                 onClick={() => router.push('/dashboard/patinadores')}
-                className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200"
+                disabled={loading}
+                className={`
+                  flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200
+                  ${loading ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
               >
                 Cancelar
               </button>

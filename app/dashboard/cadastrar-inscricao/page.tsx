@@ -28,16 +28,24 @@ interface Categoria {
   modalidade: string;
 }
 
+interface Idade {
+  id: string;
+  codIdade: string;
+  categoria: string;
+}
+
 export default function CadastrarInscricao() {
   const [equipes, setEquipes] = useState<Equipe[]>([]);
   const [patinadores, setPatinadores] = useState<Patinador[]>([]);
   const [modalidades, setModalidades] = useState<Modalidade[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [idades, setIdades] = useState<Idade[]>([]);
   
   const [equipeId, setEquipeId] = useState('');
   const [patinadorId, setPatinadorId] = useState('');
   const [modalidadeId, setModalidadeId] = useState('');
   const [categoriaId, setCategoriaId] = useState('');
+  const [idadeId, setIdadeId] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingDados, setLoadingDados] = useState(true);
   const { user } = useAuth();
@@ -78,6 +86,16 @@ export default function CadastrarInscricao() {
         })) as Categoria[];
         setCategorias(categoriasData);
 
+        // Carregar idades
+        const idadesSnapshot = await getDocs(collection(db, 'idades'));
+        const idadesData = idadesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          codIdade: doc.data().codIdade,
+          categoria: doc.data().categoria
+        }));
+        console.log('Idades carregadas:', idadesData);
+        setIdades(idadesData);
+
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
         toast.error('Erro ao carregar dados');
@@ -99,10 +117,16 @@ export default function CadastrarInscricao() {
     !modalidadeId || categoria.modalidade === modalidadeId
   );
 
+  // Filtrar idades por categoria
+  const idadesFiltradas = idades.filter(idade => 
+    !categoriaId || idade.categoria === categoriaId
+  );
+  console.log('Idades filtradas:', idadesFiltradas);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!equipeId || !patinadorId || !modalidadeId || !categoriaId) {
+    if (!equipeId || !patinadorId || !modalidadeId || !categoriaId || !idadeId) {
       toast.error('Todos os campos são obrigatórios');
       return;
     }
@@ -115,6 +139,7 @@ export default function CadastrarInscricao() {
       const patinador = patinadores.find(p => p.id === patinadorId);
       const modalidade = modalidades.find(m => m.id === modalidadeId);
       const categoria = categorias.find(c => c.id === categoriaId);
+      const idade = idades.find(i => i.id === idadeId);
 
       // Cadastrar inscrição
       await addDoc(collection(db, 'inscricoes'), {
@@ -126,6 +151,8 @@ export default function CadastrarInscricao() {
         modalidadeNome: modalidade?.nomeModalidade || '',
         categoriaId,
         categoriaNome: categoria?.categoria || '',
+        idadeId,
+        idadeCodigo: idade?.codIdade || '',
         dataCadastro: new Date().toISOString(),
         usuarioCadastro: user?.email || 'sistema'
       });
@@ -225,7 +252,10 @@ export default function CadastrarInscricao() {
               </label>
               <select
                 value={categoriaId}
-                onChange={(e) => setCategoriaId(e.target.value)}
+                onChange={(e) => {
+                  setCategoriaId(e.target.value);
+                  setIdadeId(''); // Resetar idade ao mudar de categoria
+                }}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               >
@@ -233,6 +263,28 @@ export default function CadastrarInscricao() {
                 {categoriasFiltradas.map((categoria) => (
                   <option key={categoria.id} value={categoria.id}>
                     {categoria.categoria}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Idade
+              </label>
+              <select
+                value={idadeId}
+                onChange={(e) => {
+                  console.log('Idade selecionada:', e.target.value);
+                  setIdadeId(e.target.value);
+                }}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="">Selecione uma idade</option>
+                {idadesFiltradas.map((idade) => (
+                  <option key={idade.id} value={idade.id}>
+                    {idade.codIdade}
                   </option>
                 ))}
               </select>
