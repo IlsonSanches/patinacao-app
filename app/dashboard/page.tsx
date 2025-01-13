@@ -269,7 +269,7 @@ export default function Dashboard() {
           <a href="#" className="group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-900 rounded-md hover:text-gray-900 hover:bg-gray-50">
             Dashboard
           </a>
-          <a href="/dashboard/cadastrar-juiz" className="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-600 rounded-md hover:text-gray-900 hover:bg-gray-50">
+          <a href="/dashboard/cadastrar-arbitro" className="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-600 rounded-md hover:text-gray-900 hover:bg-gray-50">
             Cadastrar Árbitro
           </a>
           <a href="/dashboard/cadastrar-equipe" className="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-600 rounded-md hover:text-gray-900 hover:bg-gray-50">
