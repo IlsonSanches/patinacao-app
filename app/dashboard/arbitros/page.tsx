@@ -5,7 +5,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-interface Juiz {
+interface Arbitro {
   id: string;
   nomeCompleto: string;
   cpf: string;
@@ -17,25 +17,25 @@ interface Juiz {
   status: string;
 }
 
-export default function ListaJuizes() {
-  const [juizes, setJuizes] = useState<Juiz[]>([]);
+export default function ListaArbitros() {
+  const [arbitros, setArbitros] = useState<Arbitro[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const carregarJuizes = async () => {
+    const carregarArbitros = async () => {
       try {
-        const juizesRef = collection(db, 'juizes');
-        const q = query(juizesRef, where('status', '==', 'ativo'));
+        const arbitrosRef = collection(db, 'arbitros');
+        const q = query(arbitrosRef, where('status', '==', 'ativo'));
         const querySnapshot = await getDocs(q);
         
-        const juizesData = querySnapshot.docs.map(doc => ({
+        const arbitrosData = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        })) as Juiz[];
+        })) as Arbitro[];
 
-        juizesData.sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto));
-        setJuizes(juizesData);
+        arbitrosData.sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto));
+        setArbitros(arbitrosData);
       } catch (error) {
         console.error('Erro ao carregar árbitros:', error);
         toast.error('Erro ao carregar lista de árbitros');
@@ -44,7 +44,7 @@ export default function ListaJuizes() {
       }
     };
 
-    carregarJuizes();
+    carregarArbitros();
   }, []);
 
   if (loading) {
@@ -63,81 +63,79 @@ export default function ListaJuizes() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Lista de Árbitros</h1>
           <button
-            onClick={() => router.push('/dashboard/cadastrar-juiz')}
+            onClick={() => router.push('/dashboard/cadastrar-arbitro')}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
           >
             Cadastrar Novo Árbitro
           </button>
         </div>
 
-        {juizes.length === 0 ? (
+        {arbitros.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">Nenhum árbitro cadastrado.</p>
           </div>
         ) : (
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nome
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      CPF
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nível
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cidade/Estado
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contato
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ações
-                    </th>
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nome
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    CPF
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Nível
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Cidade/Estado
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contato
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {arbitros.map((arbitro) => (
+                  <tr key={arbitro.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {arbitro.nomeCompleto}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-500">{arbitro.cpf}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-500">{arbitro.nivelAvaliacao}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-500">
+                        {arbitro.cidade}/{arbitro.estado}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-500">
+                        <div>{arbitro.email}</div>
+                        <div>{arbitro.telefone}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => router.push(`/dashboard/editar-arbitro/${arbitro.id}`)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        Editar
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {juizes.map((juiz) => (
-                    <tr key={juiz.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {juiz.nomeCompleto}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{juiz.cpf}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{juiz.nivelAvaliacao}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {juiz.cidade}/{juiz.estado}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          <div>{juiz.email}</div>
-                          <div>{juiz.telefone}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => router.push(`/dashboard/editar-juiz/${juiz.cpf}`)}
-                          className="text-blue-600 hover:text-blue-900 mr-4"
-                        >
-                          Editar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

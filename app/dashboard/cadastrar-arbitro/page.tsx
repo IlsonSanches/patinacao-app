@@ -6,7 +6,7 @@ import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-interface JuizData {
+interface ArbitroData {
   nomeCompleto: string;
   cpf: string;
   nivelAvaliacao: string;
@@ -17,9 +17,9 @@ interface JuizData {
   status: string;
 }
 
-export default function CadastrarJuiz() {
-  const router = useRouter();
+export default function CadastrarArbitro() {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const estados = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -39,7 +39,7 @@ export default function CadastrarJuiz() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const juizData = {
+    const arbitroData = {
       nomeCompleto: formData.get('nomeCompleto'),
       cpf: formData.get('cpf'),
       nivelAvaliacao: formData.get('nivelAvaliacao'),
@@ -52,8 +52,8 @@ export default function CadastrarJuiz() {
 
     try {
       // Verificar se já existe um árbitro com o mesmo CPF
-      const juizesRef = collection(db, 'juizes');
-      const q = query(juizesRef, where('cpf', '==', juizData.cpf), where('status', '==', 'ativo'));
+      const arbitrosRef = collection(db, 'arbitros');
+      const q = query(arbitrosRef, where('cpf', '==', arbitroData.cpf), where('status', '==', 'ativo'));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
@@ -61,9 +61,9 @@ export default function CadastrarJuiz() {
         return;
       }
 
-      await addDoc(collection(db, 'juizes'), juizData);
+      await addDoc(collection(db, 'arbitros'), arbitroData);
       toast.success('Árbitro cadastrado com sucesso!');
-      router.push('/dashboard/juizes');
+      router.push('/dashboard/arbitros');
     } catch (error) {
       console.error('Erro ao cadastrar árbitro:', error);
       toast.error('Erro ao cadastrar árbitro');
@@ -175,7 +175,7 @@ export default function CadastrarJuiz() {
           <div className="flex items-center justify-between mt-6">
             <button
               type="button"
-              onClick={() => router.push('/dashboard/juizes')}
+              onClick={() => router.push('/dashboard/arbitros')}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
             >
               Cancelar
