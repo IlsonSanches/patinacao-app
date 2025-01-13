@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { db } from '@/app/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -14,20 +14,12 @@ interface JuizData {
   estado: string;
   telefone: string;
   email: string;
+  status: string;
 }
 
 export default function CadastrarJuiz() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<JuizData>({
-    nomeCompleto: '',
-    cpf: '',
-    nivelAvaliacao: '',
-    cidade: '',
-    estado: '',
-    telefone: '',
-    email: ''
-  });
 
   const estados = [
     'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -46,37 +38,46 @@ export default function CadastrarJuiz() {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      await addDoc(collection(db, 'juizes'), {
-        ...formData,
-        dataCadastro: new Date().toISOString(),
-        status: 'ativo'
-      });
+    const formData = new FormData(e.currentTarget);
+    const juizData = {
+      nomeCompleto: formData.get('nomeCompleto'),
+      cpf: formData.get('cpf'),
+      nivelAvaliacao: formData.get('nivelAvaliacao'),
+      cidade: formData.get('cidade'),
+      estado: formData.get('estado'),
+      telefone: formData.get('telefone'),
+      email: formData.get('email'),
+      status: 'ativo',
+    };
 
-      toast.success('Juiz cadastrado com sucesso!');
-      router.push('/dashboard');
+    try {
+      // Verificar se já existe um árbitro com o mesmo CPF
+      const juizesRef = collection(db, 'juizes');
+      const q = query(juizesRef, where('cpf', '==', juizData.cpf), where('status', '==', 'ativo'));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        toast.error('Já existe um árbitro cadastrado com este CPF');
+        return;
+      }
+
+      await addDoc(collection(db, 'juizes'), juizData);
+      toast.success('Árbitro cadastrado com sucesso!');
+      router.push('/dashboard/juizes');
     } catch (error) {
-      console.error('Erro ao cadastrar juiz:', error);
-      toast.error('Erro ao cadastrar juiz');
+      console.error('Erro ao cadastrar árbitro:', error);
+      toast.error('Erro ao cadastrar árbitro');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Cadastrar Novo Juiz</h1>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">Cadastrar Novo Árbitro</h1>
         
-        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
+        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
           <div className="grid grid-cols-2 gap-6">
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -85,8 +86,6 @@ export default function CadastrarJuiz() {
               <input
                 type="text"
                 name="nomeCompleto"
-                value={formData.nomeCompleto}
-                onChange={handleChange}
                 required
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -99,8 +98,6 @@ export default function CadastrarJuiz() {
               <input
                 type="text"
                 name="cpf"
-                value={formData.cpf}
-                onChange={handleChange}
                 required
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -112,8 +109,6 @@ export default function CadastrarJuiz() {
               </label>
               <select
                 name="nivelAvaliacao"
-                value={formData.nivelAvaliacao}
-                onChange={handleChange}
                 required
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
@@ -130,8 +125,6 @@ export default function CadastrarJuiz() {
               </label>
               <select
                 name="estado"
-                value={formData.estado}
-                onChange={handleChange}
                 required
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
@@ -149,8 +142,6 @@ export default function CadastrarJuiz() {
               <input
                 type="text"
                 name="cidade"
-                value={formData.cidade}
-                onChange={handleChange}
                 required
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -163,8 +154,6 @@ export default function CadastrarJuiz() {
               <input
                 type="tel"
                 name="telefone"
-                value={formData.telefone}
-                onChange={handleChange}
                 required
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -177,21 +166,26 @@ export default function CadastrarJuiz() {
               <input
                 type="email"
                 name="email"
-                value={formData.email}
-                onChange={handleChange}
                 required
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
 
-          <div className="flex justify-end mt-6">
+          <div className="flex items-center justify-between mt-6">
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard/juizes')}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              Cancelar
+            </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300"
             >
-              {loading ? 'Cadastrando...' : 'Cadastrar Juiz'}
+              {loading ? 'Cadastrando...' : 'Cadastrar Árbitro'}
             </button>
           </div>
         </form>

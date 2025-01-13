@@ -43,7 +43,7 @@ export default function DashboardLayout({
 
   const menuItems: MenuItem[] = [
     {
-      text: 'Juízes',
+      text: 'Árbitros',
       href: '/dashboard/juizes',
       icon: FaGavel
     },

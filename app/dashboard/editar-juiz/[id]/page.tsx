@@ -1,111 +1,85 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { db } from '@/app/firebase';
-import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { collection, query, where, getDocs, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-export default function EditarJuiz({ params }: { params: { id: string } }) {
-  const [nomeCompleto, setNomeCompleto] = useState('');
-  const [cpf, setCpf] = useState('');
-  const [nivelAvaliacao, setNivelAvaliacao] = useState('');
-  const [cidade, setCidade] = useState('');
-  const [estado, setEstado] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [email, setEmail] = useState('');
-  const [observacoes, setObservacoes] = useState('');
-  const [loading, setLoading] = useState(true);
+interface JuizData {
+  id?: string;
+  nomeCompleto: string;
+  cpf: string;
+  nivelAvaliacao: string;
+  cidade: string;
+  estado: string;
+  telefone: string;
+  email: string;
+  status: string;
+}
+
+export default function EditarJuiz() {
+  const params = useParams();
   const router = useRouter();
-
-  const estados = [
-    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
-    'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
-    'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
-  ];
-
-  const niveisAvaliacao = [
-    'Estadual',
-    'Nacional',
-    'Internacional'
-  ];
+  const [loading, setLoading] = useState(false);
+  const [juizData, setJuizData] = useState<JuizData | null>(null);
 
   useEffect(() => {
     const carregarJuiz = async () => {
-      try {
-        setLoading(true);
-        const juizesRef = collection(db, 'juizes');
-        const q = query(juizesRef, where('cpf', '==', params.id));
-        const querySnapshot = await getDocs(q);
+      if (!params?.id) return;
 
-        if (!querySnapshot.empty) {
-          const juizDoc = querySnapshot.docs[0];
-          const dados = juizDoc.data();
-          
-          setNomeCompleto(dados.nomeCompleto || '');
-          setCpf(dados.cpf || '');
-          setNivelAvaliacao(dados.nivelAvaliacao || '');
-          setCidade(dados.cidade || '');
-          setEstado(dados.estado || '');
-          setTelefone(dados.telefone || '');
-          setEmail(dados.email || '');
-          setObservacoes(dados.observacoes || '');
+      try {
+        const juizRef = doc(db, 'juizes', params.id as string);
+        const juizDoc = await getDoc(juizRef);
+
+        if (juizDoc.exists()) {
+          setJuizData({ id: juizDoc.id, ...juizDoc.data() } as JuizData);
         } else {
-          toast.error('Juiz não encontrado');
-          router.push('/dashboard');
+          toast.error('Árbitro não encontrado');
+          router.push('/dashboard/juizes');
         }
       } catch (error) {
-        console.error('Erro ao carregar juiz:', error);
-        toast.error('Erro ao carregar dados do juiz');
-        router.push('/dashboard');
-      } finally {
-        setLoading(false);
+        console.error('Erro ao carregar dados do árbitro:', error);
+        toast.error('Erro ao carregar dados do árbitro');
       }
     };
 
-    if (params.id) {
-      carregarJuiz();
-    }
-  }, [params.id, router]);
+    carregarJuiz();
+  }, [params?.id, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!params?.id) return;
+
     setLoading(true);
+    const formData = new FormData(e.currentTarget);
+    const dadosAtualizados = {
+      nomeCompleto: formData.get('nomeCompleto'),
+      cpf: formData.get('cpf'),
+      nivelAvaliacao: formData.get('nivelAvaliacao'),
+      cidade: formData.get('cidade'),
+      estado: formData.get('estado'),
+      telefone: formData.get('telefone'),
+      email: formData.get('email')
+    };
 
     try {
-      const juizesRef = collection(db, 'juizes');
-      const q = query(juizesRef, where('cpf', '==', cpf));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        const juizDoc = querySnapshot.docs[0];
-        
-        await updateDoc(juizDoc.ref, {
-          nomeCompleto,
-          nivelAvaliacao,
-          cidade,
-          estado,
-          telefone,
-          email,
-          observacoes,
-          dataAtualizacao: new Date().toISOString()
-        });
-
-        toast.success('Juiz atualizado com sucesso!');
-        router.push('/dashboard');
-      }
+      const juizRef = doc(db, 'juizes', params.id as string);
+      await updateDoc(juizRef, dadosAtualizados);
+      toast.success('Árbitro atualizado com sucesso!');
+      router.push('/dashboard/juizes');
     } catch (error) {
-      console.error('Erro ao atualizar juiz:', error);
-      toast.error('Erro ao atualizar juiz');
+      console.error('Erro ao atualizar árbitro:', error);
+      toast.error('Erro ao atualizar árbitro');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  if (!juizData) {
     return (
       <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500">Carregando dados do juiz...</p>
+          <p className="text-gray-500">Carregando dados do árbitro...</p>
         </div>
       </div>
     );
@@ -113,116 +87,24 @@ export default function EditarJuiz({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-bold mb-8">Editar Juiz</h1>
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">Editar Árbitro</h1>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">CPF</label>
-            <input
-              type="text"
-              value={cpf}
-              disabled
-              className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nome Completo</label>
-            <input
-              type="text"
-              value={nomeCompleto}
-              onChange={(e) => setNomeCompleto(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nível de Avaliação</label>
-            <select
-              value={nivelAvaliacao}
-              onChange={(e) => setNivelAvaliacao(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            >
-              <option value="">Selecione um nível</option>
-              {niveisAvaliacao.map((nivel) => (
-                <option key={nivel} value={nivel}>{nivel}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Estado</label>
-            <select
-              value={estado}
-              onChange={(e) => setEstado(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            >
-              <option value="">Selecione um estado</option>
-              {estados.map((uf) => (
-                <option key={uf} value={uf}>{uf}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Cidade</label>
-            <input
-              type="text"
-              value={cidade}
-              onChange={(e) => setCidade(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Telefone</label>
-            <input
-              type="tel"
-              value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Observações</label>
-            <textarea
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              rows={4}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="flex justify-end space-x-4">
+        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+          {/* ... resto do formulário ... */}
+          
+          <div className="flex items-center justify-between mt-6">
             <button
               type="button"
-              onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+              onClick={() => router.push('/dashboard/juizes')}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-300"
             >
               {loading ? 'Salvando...' : 'Salvar Alterações'}
             </button>

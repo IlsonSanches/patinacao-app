@@ -1,15 +1,17 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useForm } from 'react-hook-form';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 
 type ParticipanteFormData = {
   nome: string;
   email: string;
   telefone: string;
-  tipo: 'atleta' | 'tecnico' | 'juiz';
+  tipo: 'atleta' | 'tecnico' | 'arbitro';
   categoria?: string;
   equipe?: string;
 };
@@ -18,7 +20,7 @@ type ParticipanteModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: ParticipanteFormData) => Promise<void>;
-  tipo: 'atletas' | 'tecnicos' | 'juizes';
+  tipo: 'atleta' | 'tecnico' | 'arbitro';
 };
 
 export default function ParticipanteModal({ isOpen, onClose, onSubmit, tipo }: ParticipanteModalProps) {
@@ -28,7 +30,7 @@ export default function ParticipanteModal({ isOpen, onClose, onSubmit, tipo }: P
     try {
       await onSubmit({
         ...data,
-        tipo: tipo === 'atletas' ? 'atleta' : tipo === 'tecnicos' ? 'tecnico' : 'juiz'
+        tipo: tipo === 'atletas' ? 'atleta' : tipo === 'tecnicos' ? 'tecnico' : 'arbitro'
       });
       reset();
       onClose();
