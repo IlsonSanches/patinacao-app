@@ -12,7 +12,7 @@ interface Inscricao {
   patinadorNome: string;
   modalidadeNome: string;
   categoriaNome: string;
-  idadeCodigo: string;
+  idade: string;
   dataCadastro: string;
 }
 
@@ -41,7 +41,12 @@ export default function ListaInscricoes() {
         const inscricoesSnapshot = await getDocs(collection(db, 'inscricoes'));
         const inscricoesData = inscricoesSnapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          equipeNome: doc.data().equipeNome,
+          patinadorNome: doc.data().patinadorNome,
+          modalidadeNome: doc.data().modalidadeNome,
+          categoriaNome: doc.data().categoriaNome,
+          idade: doc.data().idade,
+          dataCadastro: doc.data().dataCadastro
         })) as Inscricao[];
 
         // Ordenar por nome do patinador
@@ -140,7 +145,7 @@ export default function ListaInscricoes() {
                     <div className="text-sm text-gray-900">{inscricao.categoriaNome}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{inscricao.idadeCodigo}</div>
+                    <div className="text-sm text-gray-900">{inscricao.idade}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center gap-3">

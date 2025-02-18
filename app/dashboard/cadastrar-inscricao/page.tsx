@@ -15,6 +15,7 @@ interface Patinador {
   id: string;
   nome: string;
   equipe: string;
+  dataNascimento: string;
 }
 
 interface Modalidade {
@@ -66,8 +67,11 @@ export default function CadastrarInscricao() {
         const patinadoresSnapshot = await getDocs(collection(db, 'patinadores'));
         const patinadoresData = patinadoresSnapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
-        })) as Patinador[];
+          nome: doc.data().nome,
+          equipe: doc.data().equipe,
+          dataNascimento: doc.data().dataNascimento
+        }));
+        console.log('Patinadores carregados:', patinadoresData);
         setPatinadores(patinadoresData);
 
         // Carregar modalidades
@@ -123,36 +127,61 @@ export default function CadastrarInscricao() {
   );
   console.log('Idades filtradas:', idadesFiltradas);
 
+  // Função para calcular idade
+  const calcularIdade = (dataNascimento: string): string => {
+    if (!dataNascimento) return 'Data não informada';
+    
+    try {
+      const hoje = new Date();
+      const nascimento = new Date(dataNascimento);
+      let idade = hoje.getFullYear() - nascimento.getFullYear();
+      const mesAtual = hoje.getMonth();
+      const mesNascimento = nascimento.getMonth();
+      
+      if (mesAtual < mesNascimento || (mesAtual === mesNascimento && hoje.getDate() < nascimento.getDate())) {
+        idade--;
+      }
+      
+      return `${idade} anos`;
+    } catch (error) {
+      console.error('Erro ao calcular idade:', error);
+      return 'Erro ao calcular idade';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!equipeId || !patinadorId || !modalidadeId || !categoriaId || !idadeId) {
-      toast.error('Todos os campos são obrigatórios');
+    if (!equipeId || !patinadorId || !modalidadeId || !categoriaId) {
+      toast.error('Equipe, Patinador, Modalidade e Categoria são obrigatórios');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Buscar os dados completos dos itens selecionados
-      const equipe = equipes.find(e => e.id === equipeId);
       const patinador = patinadores.find(p => p.id === patinadorId);
+      if (!patinador) {
+        throw new Error('Patinador não encontrado');
+      }
+
+      const equipe = equipes.find(e => e.id === equipeId);
       const modalidade = modalidades.find(m => m.id === modalidadeId);
       const categoria = categorias.find(c => c.id === categoriaId);
-      const idade = idades.find(i => i.id === idadeId);
 
-      // Cadastrar inscrição
+      const idadeCalculada = calcularIdade(patinador.dataNascimento);
+      console.log('Idade calculada:', idadeCalculada);
+
       await addDoc(collection(db, 'inscricoes'), {
         equipeId,
         equipeNome: equipe?.nomeEquipe || '',
         patinadorId,
-        patinadorNome: patinador?.nome || '',
+        patinadorNome: patinador.nome,
         modalidadeId,
         modalidadeNome: modalidade?.nomeModalidade || '',
         categoriaId,
         categoriaNome: categoria?.categoria || '',
-        idadeId,
-        idadeCodigo: idade?.codIdade || '',
+        idade: idadeCalculada,
         dataCadastro: new Date().toISOString(),
         usuarioCadastro: user?.email || 'sistema'
       });
@@ -162,6 +191,7 @@ export default function CadastrarInscricao() {
     } catch (error) {
       console.error('Erro ao realizar inscrição:', error);
       toast.error('Erro ao realizar inscrição');
+    } finally {
       setLoading(false);
     }
   };
@@ -270,24 +300,19 @@ export default function CadastrarInscricao() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Idade
+                Idade do Patinador
               </label>
-              <select
-                value={idadeId}
-                onChange={(e) => {
-                  console.log('Idade selecionada:', e.target.value);
-                  setIdadeId(e.target.value);
-                }}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              >
-                <option value="">Selecione uma idade</option>
-                {idadesFiltradas.map((idade) => (
-                  <option key={idade.id} value={idade.id}>
-                    {idade.codIdade}
-                  </option>
-                ))}
-              </select>
+              <div className="w-full p-2 border border-gray-300 rounded-md bg-gray-50">
+                {patinadorId ? (
+                  (() => {
+                    const patinador = patinadores.find(p => p.id === patinadorId);
+                    console.log('Patinador selecionado:', patinador);
+                    return patinador ? calcularIdade(patinador.dataNascimento) : 'Patinador não encontrado';
+                  })()
+                ) : (
+                  'Selecione um patinador para ver a idade'
+                )}
+              </div>
             </div>
 
             <div className="flex gap-4">
