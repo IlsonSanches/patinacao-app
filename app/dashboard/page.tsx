@@ -48,7 +48,7 @@ export default function Dashboard() {
           id: doc.id,
           ...doc.data()
         })) as Equipe[];
-
+        
         // Carregar patinadores para cada equipe
         const patinadoresRef = collection(db, 'patinadores');
         let totalGeralPatinadores = 0;
@@ -139,7 +139,7 @@ export default function Dashboard() {
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <button
+          <button 
             onClick={handleLogout}
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
@@ -196,16 +196,16 @@ export default function Dashboard() {
               {equipes.length === 0 ? (
                 <div className="p-6 text-center text-gray-500">
                   Nenhuma equipe cadastrada ainda.
-                </div>
-              ) : (
+          </div>
+        ) : (
                 equipes.map((equipe) => (
                   <div key={equipe.id} className="p-6 hover:bg-gray-50">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       <div>
                         <div className="flex items-center">
                           <h3 className="text-lg font-semibold text-gray-800">
-                            {equipe.nomeEquipe}
-                          </h3>
+                  {equipe.nomeEquipe}
+                </h3>
                           <span className="ml-3 bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
                             {equipe.totalPatinadores || 0} patinadores
                           </span>
@@ -240,7 +240,7 @@ export default function Dashboard() {
                           <PencilSquareIcon className="h-4 w-4 mr-1" />
                           Editar
                         </button>
-                        <button
+                  <button
                           onClick={() => handleDeletarEquipe(equipe.id, equipe.nomeEquipe)}
                           disabled={equipeDeletando === equipe.id}
                           className="flex items-center justify-center px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 disabled:opacity-50"
@@ -253,9 +253,9 @@ export default function Dashboard() {
                               Deletar
                             </>
                           )}
-                        </button>
-                      </div>
-                    </div>
+                  </button>
+                </div>
+              </div>
                   </div>
                 ))
               )}

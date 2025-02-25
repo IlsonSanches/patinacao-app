@@ -90,8 +90,8 @@ export default function CadastrarInscricao() {
         const idadesSnapshot = await getDocs(collection(db, 'idades'));
         const idadesData = idadesSnapshot.docs.map(doc => ({
           id: doc.id,
-          codIdade: doc.data().codIdade,
-          categoria: doc.data().categoria
+          codIdade: doc.data().codIdade || '',
+          categoria: doc.data().categoria || ''
         }));
         console.log('Idades carregadas:', idadesData);
         setIdades(idadesData);
@@ -118,9 +118,14 @@ export default function CadastrarInscricao() {
   );
 
   // Filtrar idades por categoria
-  const idadesFiltradas = idades.filter(idade => 
-    !categoriaId || idade.categoria === categoriaId
-  );
+  const idadesFiltradas = idades.filter(idade => {
+    console.log('Filtrando idade:', idade, 'para categoria:', categoriaId);
+    return categoriaId && idade.categoria === categoriaId;
+  });
+
+  // Adicionar este console.log para debug
+  console.log('Categoria selecionada:', categoriaId);
+  console.log('Todas as idades:', idades);
   console.log('Idades filtradas:', idadesFiltradas);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,7 +163,7 @@ export default function CadastrarInscricao() {
       });
 
       toast.success('Inscrição realizada com sucesso!');
-      router.push('/dashboard/inscricoes');
+      router.replace('/dashboard/inscricoes');
     } catch (error) {
       console.error('Erro ao realizar inscrição:', error);
       toast.error('Erro ao realizar inscrição');
@@ -305,7 +310,7 @@ export default function CadastrarInscricao() {
 
               <button
                 type="button"
-                onClick={() => router.push('/dashboard/inscricoes')}
+                onClick={() => router.replace('/dashboard/inscricoes')}
                 className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200"
               >
                 Cancelar
