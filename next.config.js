@@ -10,6 +10,17 @@ const nextConfig = {
   },
   images: {
     domains: ['seu-dominio.com'], // Adicione os domínios das suas imagens
+  },
+  webpack: (config, { isServer }) => {
+    // Resolve o problema com o módulo undici
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'undici': false, // Desativa o uso do undici no cliente
+      }
+    }
+    
+    return config;
   }
 }
 
