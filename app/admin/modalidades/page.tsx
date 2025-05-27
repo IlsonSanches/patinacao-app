@@ -8,22 +8,45 @@ import { Modalidade } from '@/types/database';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
+// Força a página a ser renderizada dinamicamente
+export const dynamic = 'force-dynamic';
+
 export default function ModalidadesAdminPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [modalidades, setModalidades] = useState<Modalidade[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroCategoria, setFiltroCategoria] = useState('');
 
-  // Verificar se o usuário está logado
-  if (!user) {
-    router.push('/login');
-    return null;
-  }
+  // Aguardar o carregamento da autenticação
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
-    carregarModalidades();
-  }, []);
+    if (user) {
+      carregarModalidades();
+    }
+  }, [user]);
+
+  // Mostrar loading enquanto verifica autenticação
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Se não estiver logado, não renderizar nada (redirecionamento em andamento)
+  if (!user) {
+    return null;
+  }
 
   const carregarModalidades = async () => {
     try {
