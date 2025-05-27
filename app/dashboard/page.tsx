@@ -209,9 +209,6 @@ export default function Dashboard() {
                           <span className="ml-3 bg-purple-100 text-purple-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
                             {equipe.totalPatinadores || 0} patinadores
                           </span>
-                          <span className="ml-2 bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-                            {equipe.codigoEquipe}
-                          </span>
                         </div>
                         <div className="mt-2 space-y-2">
                           <div className="flex items-center text-gray-600">
@@ -268,6 +265,9 @@ export default function Dashboard() {
         <nav className="mt-5 px-2">
           <a href="#" className="group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-900 rounded-md hover:text-gray-900 hover:bg-gray-50">
             Dashboard
+          </a>
+          <a href="/admin" className="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium text-orange-600 rounded-md hover:text-orange-900 hover:bg-orange-50 border border-orange-200">
+            🔧 Administração
           </a>
           <a href="/dashboard/cadastrar-juiz" className="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium text-gray-600 rounded-md hover:text-gray-900 hover:bg-gray-50">
             Cadastrar Juiz
